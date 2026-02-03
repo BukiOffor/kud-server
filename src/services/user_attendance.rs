@@ -1,6 +1,6 @@
 use super::*;
-use crate::{dto::attendance::*, models::user_attendance::*};
 use crate::models::users::User;
+use crate::{dto::attendance::*, models::user_attendance::*};
 use chrono::{Datelike, TimeZone, Timelike};
 use chrono_tz::Africa::Lagos;
 use uuid::Uuid;
@@ -19,9 +19,7 @@ pub async fn admin_sign_attendance(
     let today = Lagos
         .from_utc_datetime(&chrono::Utc::now().naive_utc())
         .date_naive();
-    let date_string = today.to_string();
-    tracing::info!("{}", date_string);
-    let mut user_attendance = UserAttendance::new(worker_id, date_string);
+    let mut user_attendance = UserAttendance::new(worker_id, today);
     user_attendance.set_marked_by(admin_id);
     diesel::insert_into(schema::user_attendance::table)
         .values(&user_attendance)
@@ -65,9 +63,7 @@ pub async fn sign_attendance(
         .from_utc_datetime(&chrono::Utc::now().naive_utc())
         .date_naive();
 
-    let date_string = today.to_string();
-    tracing::info!("{}", date_string);
-    let user_attendance = UserAttendance::new(user_id, date_string);
+    let user_attendance = UserAttendance::new(user_id, today);
     diesel::insert_into(schema::user_attendance::table)
         .values(&user_attendance)
         .execute(&mut conn)
@@ -90,7 +86,7 @@ fn is_valid_attempt(
     match weekday {
         chrono::Weekday::Sun => {
             // Sunday: anytime
-            let church_location = crate::CHURCH_LOCATION
+            let church_location = crate::CHIDA_LOCATION
                 .get()
                 .ok_or(ModuleError::Error("Church location not set".into()))?;
             if !is_within_radius(payload.location, church_location.clone(), 150.0) {
@@ -130,7 +126,7 @@ fn is_valid_attempt(
             if !is_meeting_time {
                 return Err(ModuleError::Error("Attendance window is closed".into()));
             }
-            let church_location = crate::DOA_CENTER
+            let church_location = crate::DOA_LOCATION
                 .get()
                 .ok_or(ModuleError::Error("Church location not set".into()))?;
             if !is_within_radius(payload.location, church_location.clone(), 150.0) {
@@ -158,9 +154,7 @@ fn is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
     let hour = now.hour();
     let minute = now.minute();
     match weekday {
-        chrono::Weekday::Sun => {
-            true
-        }
+        chrono::Weekday::Sun => true,
         chrono::Weekday::Wed => {
             // Wednesday: 16:30 → 19:45
             let minutes_since_midnight = hour * 60 + minute;

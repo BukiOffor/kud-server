@@ -34,13 +34,13 @@ async fn main() {
     }
     .into();
 
-    server::CHURCH_LOCATION
+    server::CHIDA_LOCATION
         .set(server::dto::attendance::GeoPoint {
             lat: 9.070818996337124,
             lng: 7.434377769114212,
         })
         .unwrap();
-    server::DOA_CENTER
+    server::DOA_LOCATION
         .set(server::dto::attendance::GeoPoint {
             lat: 9.076560214946829,
             lng: 7.431590122491971,

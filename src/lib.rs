@@ -43,8 +43,8 @@ pub type Pool = bb8::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 pub type Connection<'a> =
     bb8::PooledConnection<'a, AsyncDieselConnectionManager<AsyncPgConnection>>;
 pub const POOL_ERROR_MSG: &str = "Could not get connection from the database pool";
-pub static CHURCH_LOCATION: OnceLock<GeoPoint> = OnceLock::new();
-pub static DOA_CENTER: OnceLock<GeoPoint> = OnceLock::new();
+pub static CHIDA_LOCATION: OnceLock<GeoPoint> = OnceLock::new();
+pub static DOA_LOCATION: OnceLock<GeoPoint> = OnceLock::new();
 pub static HOME_LOCATION_CHECKIN_RADIUS: OnceLock<GeoPoint> = OnceLock::new();
 #[derive(Clone)]
 pub struct AppState {

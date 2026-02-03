@@ -1,4 +1,5 @@
 use super::*;
+use chrono::NaiveDate;
 
 #[derive(
     Debug,
@@ -16,7 +17,7 @@ use super::*;
 pub struct UserAttendance {
     pub id: Uuid,
     pub user_id: Uuid,
-    pub date: String,
+    pub date: NaiveDate,
     pub time_in: NaiveDateTime,
     pub time_out: Option<NaiveDateTime>,
     pub event_id: Option<Uuid>,
@@ -51,9 +52,8 @@ impl ToSql<Text, diesel::pg::Pg> for AttendanceType {
     }
 }
 
-
 impl UserAttendance {
-    pub fn new(user_id: Uuid, date: String) -> Self {
+    pub fn new(user_id: Uuid, date: NaiveDate) -> Self {
         Self {
             id: Uuid::now_v7(),
             user_id,

@@ -1,3 +1,4 @@
+pub mod events;
 pub mod user_attendance;
 pub mod users;
 

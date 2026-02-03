@@ -31,7 +31,7 @@ diesel::table! {
     user_attendance (id) {
         id -> Uuid,
         user_id -> Uuid,
-        date -> Text,
+        date -> Date,
         time_in -> Timestamp,
         time_out -> Nullable<Timestamp>,
         marked_by -> Nullable<Uuid>,
@@ -49,6 +49,8 @@ diesel::table! {
         description -> Text,
         date -> Timestamp,
         time -> Timestamp,
+        grace_period_in_minutes -> Integer,
+        attendance_type -> Text,
         location -> Text,
         created_by -> Uuid,
         created_at -> Timestamp,

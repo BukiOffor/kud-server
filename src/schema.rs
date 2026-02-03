@@ -1,3 +1,36 @@
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
+    events (id) {
+        id -> Uuid,
+        title -> Text,
+        description -> Text,
+        date -> Date,
+        time -> Time,
+        grace_period_in_minutes -> Int4,
+        attendance_type -> Text,
+        location -> Text,
+        created_by -> Uuid,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    user_attendance (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        date -> Date,
+        time_in -> Timestamp,
+        time_out -> Nullable<Timestamp>,
+        marked_by -> Nullable<Uuid>,
+        event_id -> Nullable<Uuid>,
+        attendance_type -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
 diesel::table! {
     users (id) {
         id -> Uuid,
@@ -27,35 +60,11 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    user_attendance (id) {
-        id -> Uuid,
-        user_id -> Uuid,
-        date -> Date,
-        time_in -> Timestamp,
-        time_out -> Nullable<Timestamp>,
-        marked_by -> Nullable<Uuid>,
-        event_id -> Nullable<Uuid>,
-        attendance_type -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-    }
-}
+diesel::joinable!(events -> users (created_by));
+diesel::joinable!(user_attendance -> events (event_id));
 
-diesel::table! {
-    events (id) {
-        id -> Uuid,
-        title -> Text,
-        description -> Text,
-        date -> Timestamp,
-        time -> Timestamp,
-        grace_period_in_minutes -> Integer,
-        attendance_type -> Text,
-        location -> Text,
-        created_by -> Uuid,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-    }
-}
-
-diesel::allow_tables_to_appear_in_same_query!(users, user_attendance,);
+diesel::allow_tables_to_appear_in_same_query!(
+    events,
+    user_attendance,
+    users,
+);

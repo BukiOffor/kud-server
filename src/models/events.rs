@@ -1,3 +1,5 @@
+use chrono::{NaiveDate, NaiveTime};
+
 use crate::models::user_attendance::AttendanceType;
 
 use super::*;
@@ -19,8 +21,8 @@ pub struct Event {
     pub id: Uuid,
     pub title: String,
     pub description: String,
-    pub date: NaiveDateTime,
-    pub time: NaiveDateTime,
+    pub date: NaiveDate,
+    pub time: NaiveTime,
     pub grace_period_in_minutes: i32,
     pub attendance_type: AttendanceType,
     pub location: Location,

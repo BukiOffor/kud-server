@@ -97,14 +97,7 @@ pub async fn check_into_event(
     // Check check-in logic
     let now = Local::now().naive_local();
 
-    // Logic:
-    // If today is NOT the event date, you can't check in (unless multiday logic, but let's assume single day for now)
-    // Actually `event.date` is NaiveDateTime, effectively a timestamp.
-    // And `event.time` is also NaiveDateTime.
-    // This schema is a bit redundant or confusing. Usually `date` is Date and `time` is Time or just one DateTime.
-    // Assuming `time` holds the full start datetime for calculation.
-
-    let start_time = event.time;
+    let start_time = event.date.and_time(event.time);
     let end_time = start_time + Duration::minutes(event.grace_period_in_minutes as i64);
 
     // Simple window check
@@ -164,7 +157,11 @@ pub async fn get_upcoming_events(pool: Arc<Pool>) -> Result<Vec<Event>, ModuleEr
     let mut conn = pool.get().await?;
     let now = Local::now().naive_local();
     let events = schema::events::table
-        .filter(schema::events::time.gt(now))
+        .filter(
+            schema::events::date.gt(now.date()).or(schema::events::date
+                .eq(now.date())
+                .and(schema::events::time.gt(now.time()))),
+        )
         .load::<Event>(&mut conn)
         .await?;
     Ok(events)
@@ -174,7 +171,11 @@ pub async fn get_past_events(pool: Arc<Pool>) -> Result<Vec<Event>, ModuleError>
     let mut conn = pool.get().await?;
     let now = Local::now().naive_local();
     let events = schema::events::table
-        .filter(schema::events::time.lt(now))
+        .filter(
+            schema::events::date.lt(now.date()).or(schema::events::date
+                .eq(now.date())
+                .and(schema::events::time.lt(now.time()))),
+        )
         .load::<Event>(&mut conn)
         .await?;
     Ok(events)

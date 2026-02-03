@@ -1,11 +1,8 @@
--- Enable UUID generation
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- =========================
 -- USERS
 -- =========================
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
 
     username TEXT,
     reg_no TEXT NOT NULL,
@@ -47,13 +44,13 @@ CREATE UNIQUE INDEX users_reg_no_idx ON users(reg_no);
 -- EVENTS
 -- =========================
 CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
 
     title TEXT NOT NULL,
     description TEXT NOT NULL,
 
-    date TIMESTAMP NOT NULL,
-    time TIMESTAMP NOT NULL,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
 
     grace_period_in_minutes INTEGER NOT NULL DEFAULT 0,
     attendance_type TEXT NOT NULL,
@@ -76,7 +73,7 @@ CREATE INDEX events_date_idx ON events(date);
 -- USER ATTENDANCE
 -- =========================
 CREATE TABLE user_attendance (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
 
     user_id UUID NOT NULL,
     date DATE NOT NULL,

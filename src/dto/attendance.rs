@@ -1,19 +1,19 @@
 use super::*;
-use crate::models::users::*;
-use diesel::sql_types::{Bool, Int8, Nullable, Text, Timestamp, Uuid as SqlUuid};
 
-// #[derive(Selectable, Serialize, Deserialize, Queryable)]
-// #[diesel(table_name = user_attendance)]
-// pub struct UserAttendanceDto {
-//     pub id: uuid::Uuid,
-//     pub user_id: uuid::Uuid,
-//     pub date: NaiveDateTime,
-//     pub time: NaiveDateTime,
-//     pub location: Option<String>,
-//     pub device_id: Option<String>,
-//     pub created_at: NaiveDateTime,
-//     pub updated_at: NaiveDateTime,
-// }
+#[derive(Selectable, Serialize, Deserialize, Queryable)]
+#[diesel(table_name = user_attendance)]
+pub struct UserAttendanceDto {
+    pub id: uuid::Uuid,
+    pub user_id: uuid::Uuid,
+    pub date: NaiveDateTime,
+    pub time_in: NaiveDateTime,
+    pub time_out: Option<NaiveDateTime>,
+    pub marked_by: Option<uuid::Uuid>,
+    pub event_id: Option<uuid::Uuid>,
+    pub attendance_type: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GeoPoint {

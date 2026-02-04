@@ -15,15 +15,15 @@ pub fn event_routes(state: Arc<AppState>) -> Router {
         .route("/upcoming", get(get_upcoming_events))
         .route("/past", get(get_past_events))
         .route("/", get(get_events))
-        .route("/:event_id", get(get_event))
-        .route("/user/:user_id", get(get_events_by_user))
+        .route("/get/{event_id}", get(get_event))
+        .route("/user/{user_id}", get(get_events_by_user))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::authorize,
         )))
         .route("/create", post(create_event))
         .route("/update", patch(update_event))
-        .route("/delete/:event_id", delete(delete_event))
+        .route("/delete/{event_id}", delete(delete_event))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,

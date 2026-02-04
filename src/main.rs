@@ -24,6 +24,10 @@ async fn main() {
         std::process::exit(1);
     }
 
+    if let Err(e) = server::services::users::seed_default_admin(pool.clone()).await {
+        tracing::error!("Failed to seed default admin: {}", e.to_string());
+    }
+
     let config = Arc::new(server::config::Config::init().unwrap_or_else(|e| {
         tracing::error!(e = %e, "Failed to load configuration");
         std::process::exit(1);

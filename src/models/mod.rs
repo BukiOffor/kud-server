@@ -17,7 +17,6 @@ use diesel::{
     pg::Pg,
     serialize::{self, Output, ToSql},
 };
-use schema::*;
 use std::io::Write;
 use uuid::Uuid;
 

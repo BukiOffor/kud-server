@@ -1,9 +1,66 @@
 use std::collections::{HashMap, HashSet};
 
 use axum::extract::Multipart;
+use chrono::Datelike;
 
 use super::*;
 use crate::{dto::user::*, models::users::*};
+
+pub async fn seed_default_admin(pool: Arc<Pool>) -> Result<(), ModuleError> {
+    let mut conn = pool
+        .get()
+        .await
+        .map_err(|_| ModuleError::InternalError(POOL_ERROR_MSG.into()))?;
+
+    let count = schema::users::table
+        .count()
+        .get_result::<i64>(&mut conn)
+        .await?;
+
+    if count > 0 {
+        return Ok(());
+    }
+
+    tracing::info!("Seeding default admin user...");
+
+    let password_hash = crate::helpers::password_hasher("password")?;
+    let year = chrono::Local::now().year().to_string();
+
+    let admin = User {
+        id: Uuid::now_v7(),
+        username: Some("admin".to_string()),
+        reg_no: format!("{}/KUD/001", year),
+        first_name: "Admin".to_string(),
+        last_name: "User".to_string(),
+        email: "admin@kud.com".to_string(),
+        password: password_hash,
+        dob: None,
+        avatar_url: None,
+        created_at: chrono::Local::now().naive_local(),
+        updated_at: chrono::Local::now().naive_local(),
+        year_joined: year,
+        current_roster_hall: None,
+        current_roster_allocation: None,
+        role: Role::Admin,
+        last_seen: None,
+        device_id: None,
+        is_active: true,
+        gender: None,
+        address: None,
+        city: None,
+        state: None,
+        country: None,
+        phone: None,
+    };
+
+    diesel::insert_into(schema::users::table)
+        .values(&admin)
+        .execute(&mut conn)
+        .await?;
+
+    tracing::info!("Default admin seeded successfully.");
+    Ok(())
+}
 
 pub async fn register_user(pool: Arc<Pool>, payload: NewUser) -> Result<Message, ModuleError> {
     let mut conn = &mut pool

@@ -251,14 +251,17 @@ pub async fn import_users(
         let mut rdr = csv::Reader::from_reader(body.as_bytes());
 
         for result in rdr.deserialize() {
-            let user: crate::dto::user::NewUser =
+            let mut user: crate::dto::user::CsvUser =
                 result.map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
-            let new_user: User = user.try_into()?;
+
+            tracing::info!("User before validation: {:#?}", user);
+            user.validate();
+            tracing::info!("User after validation: {:#?}", user);
+            let new_user: User = user.to_new_user()?.try_into()?;
             temp_years.insert(new_user.year_joined.to_string());
             temp_users.push(new_user);
         }
     }
-
     // Get existing counts for each year from database
     for year in temp_years {
         let count = schema::users::table

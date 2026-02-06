@@ -2,10 +2,14 @@ import axios from 'axios';
 import { 
   LoginPayload, UserDto, Event, CheckIntoEventRequest, 
   NewUser, UserFilter, UpdateUserRequest, Message,
-  CreateEventRequest, UpdateEventRequest, ChangePasswordRequest
+  CreateEventRequest, UpdateEventRequest, ChangePasswordRequest,
+  SignAttendanceRequest, UserAttendanceDto, UserPresentStats,
+  AttendanceStats, AttendanceSummary, UserAttendanceHistory
 } from './types';
 
-const API_BASE_URL ='http://localhost:9898/api/v1';
+const API_BASE_URL ='https://kud-server.duckdns.org/api/v1';
+//const API_BASE_URL ='http://localhost:9898/api/v1';
+
 //const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ' https://5e188efecc5a.ngrok-free.app/api/v1';
 
 const api = axios.create({
@@ -46,12 +50,30 @@ export const eventsApi = {
 
 export const usersApi = {
   getById: (id: string) => api.post<UserDto>(`/users/get/${id}`),
-  getAll: (filter: UserFilter) => api.post<UserDto[]>('/users/get_all', filter),
-  register: (payload: NewUser) => api.post<Message>('/users/register', payload),
+  getAll: () => api.get<UserDto[]>('/users/admin/get_all'),
+  register: (payload: NewUser) => api.post<Message>('/users/admin/register', payload),
   update: (payload: UpdateUserRequest) => api.post<Message>('/users/update', payload),
-  delete: (id: string) => api.post<Message>(`/users/delete/${id}`),
-  deactivate: (id: string) => api.post<Message>(`/users/deactive/${id}`),
+  delete: (id: string) => api.post<Message>(`/users/admin/delete/${id}`),
+  deactivate: (id: string) => api.post<Message>(`/users/admin/deactive/${id}`),
   changePassword: (payload: ChangePasswordRequest) => api.post<Message>('/users/change_password', payload),
+  importUsers: (formData: FormData) => api.post<Message>('/users/admin/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+};
+
+export const attendanceApi = {
+  sign: (payload: SignAttendanceRequest) => api.post<Message>('/attendance/check-in', payload),
+  adminSign: (userId: string) => api.get<Message>(`/attendance/admin/sign/${userId}`),
+};
+
+export const analyticsApi = {
+  getTotalUsers: () => api.get<Message<UserDto[]>>('/analytics/total-users'),
+  getUsersPresentOnDay: (date: string) => api.get<Message<UserPresentStats>>(`/analytics/users-on-day`, { params: { date } }),
+  getUpcomingBirthdays: () => api.get<Message<UserDto[]>>('/analytics/upcoming-birthdays'),
+  getAttendanceRates: () => api.get<Message<AttendanceStats>>('/analytics/attendance-rates'),
+  getUserAttendance: (userId: string) => api.get<Message<UserAttendanceHistory>>(`/analytics/user-attendance/${userId}`),
 };
 
 export default api;

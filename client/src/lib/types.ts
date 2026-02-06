@@ -108,6 +108,50 @@ export interface ChangePasswordRequest {
   password: string;
 }
 
-export interface Message {
-  message: string;
+export interface SignAttendanceRequest {
+  location: GeoPoint;
+  device_id: string;
+}
+
+export interface UserAttendanceDto {
+  id: string;
+  user_id: string;
+  date: string;
+  week_day: string;
+  time_in: string;
+  time_out?: string;
+  marked_by?: string;
+  event_id?: string;
+  attendance_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPresentStats {
+  absentees: UserDto[];
+  date: string;
+  presentees: UserDto[];
+}
+
+export interface AttendanceStats {
+  admin_rate: number;
+  user_rate: number;
+  technical_rate: number;
+  total_users: number;
+}
+
+export interface AttendanceSummary {
+  total_days: number;
+  days_present: number;
+  rate: number;
+}
+
+export interface UserAttendanceHistory {
+  user: UserDto;
+  history: UserAttendanceDto[];
+  summary: AttendanceSummary;
+}
+
+export interface Message<T = void> {
+  message: T extends void ? string : T;
 }

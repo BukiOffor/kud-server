@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usersApi } from '@/lib/api';
 import { UserDto } from '@/lib/types';
-import { User, Mail, Shield, Search, UserPlus, MoreVertical, Download, Upload } from 'lucide-react';
+import { User, Mail, Shield, Search, UserPlus, MoreVertical, Download, Upload, Loader2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import RegisterUserForm from './RegisterUserForm';
 
 const UsersPage = () => {
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -21,7 +23,7 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await usersApi.getAll({});
+      const response = await usersApi.getAll();
       setUsers(response.data);
       setError(null);
     } catch (err) {
@@ -41,6 +43,38 @@ const UsersPage = () => {
     }
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      alert('Please upload a valid CSV file.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setImporting(true);
+      const response = await usersApi.importUsers(formData);
+      alert(response.data.message || 'Users imported successfully');
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to import users:', err);
+      alert('Failed to import users. Please check the file format.');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     `${user.first_name} ${user.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
     user.email.toLowerCase().includes(search.toLowerCase())
@@ -48,6 +82,13 @@ const UsersPage = () => {
 
   return (
     <div>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        accept=".csv" 
+        className="hidden" 
+      />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Users Management</h1>
         <div className="flex flex-wrap gap-2">
@@ -68,8 +109,16 @@ const UsersPage = () => {
             <Download className="me-2 h-4 w-4" />
             Export
           </button>
-          <button className="flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-            <Upload className="me-2 h-4 w-4" />
+          <button 
+            onClick={handleImportClick}
+            disabled={importing}
+            className="flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            {importing ? (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="me-2 h-4 w-4" />
+            )}
             Import
           </button>
           <button 

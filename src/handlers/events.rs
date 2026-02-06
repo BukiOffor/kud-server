@@ -11,6 +11,13 @@ pub fn routes(state: Arc<AppState>) -> Router {
 
 pub fn event_routes(state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/create", post(create_event))
+        .route("/update", patch(update_event))
+        .route("/delete/{event_id}", delete(delete_event))
+        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::auth::middleware::admin_authorize,
+        )))
         .route("/attendance/check-in", post(check_into_event))
         .route("/upcoming", get(get_upcoming_events))
         .route("/past", get(get_past_events))
@@ -20,13 +27,6 @@ pub fn event_routes(state: Arc<AppState>) -> Router {
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::authorize,
-        )))
-        .route("/create", post(create_event))
-        .route("/update", patch(update_event))
-        .route("/delete/{event_id}", delete(delete_event))
-        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
-            state.clone(),
-            crate::auth::middleware::admin_authorize,
         )))
         .with_state(state)
 }

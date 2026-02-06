@@ -1,3 +1,5 @@
+use chrono::NaiveDate;
+
 use super::*;
 use crate::models::users::*;
 
@@ -106,4 +108,61 @@ pub struct UserFilter {
 pub struct ChangePasswordRequest {
     pub email: String,
     pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewUserAdmin {
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub password: String,
+    pub dob: Option<NaiveDateTime>,
+    pub year_joined: String,
+    pub is_active: bool,
+    pub role: Role,
+    pub gender: Option<String>,
+    pub phone: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CsvUser {
+    pub timestamp: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub username: String,
+    pub dob: String,
+    pub year_joined: String,
+    pub gender: String,
+    pub phone: String,
+}
+
+impl CsvUser {
+    pub fn validate(&mut self) {
+        let cleaned_year = self.year_joined.replace("Year ", "").trim().to_string();
+        if cleaned_year.parse::<i32>().is_ok() {
+            self.year_joined = cleaned_year;
+        }else {
+            self.year_joined = "2025".to_string();
+        }
+    }
+
+    pub fn to_new_user(&self, ) -> Result<NewUser, ModuleError> {
+        let dob = self.dob.clone();
+        let dob = NaiveDate::parse_from_str(&dob, "%m/%d/%y")
+            .map_err(|_| ModuleError::Error("Invalid date format".to_string().into()))?;
+        let dob = NaiveDateTime::from(dob);
+        Ok(NewUser {
+            first_name: self.first_name.clone().trim().to_string(),
+            last_name: self.last_name.clone().trim().to_string(),
+            email: self.email.clone().to_lowercase().trim().to_string(),
+            password: "password".to_string(),
+            dob: Some(dob),
+            year_joined: self.year_joined.clone(),
+            is_active: true,
+            role: Role::User,
+            gender: Some(self.gender.clone()),
+            phone: Some(self.phone.clone()),
+        })
+    }
 }

@@ -77,6 +77,7 @@ async fn main() {
             "http://localhost:5173".parse::<HeaderValue>().unwrap(),
             "http://127.0.0.1:5173".parse::<HeaderValue>().unwrap(),
             "http://127.0.0.1:3000".parse::<HeaderValue>().unwrap(),
+            "https://kud-server.vercel.app".parse::<HeaderValue>().unwrap(),
         ]);
     server::info!("Starting Web Server ............");
     let app = handlers::get_routes(state)

@@ -24,6 +24,7 @@ const Dashboard = () => {
         eventsApi.getUpcoming()
       ]);
       console.log(statsRes.data);
+      //@ts-ignore
       setStats(statsRes.data.data);
       setUpcomingEvents(eventsRes.data.slice(0, 5)); // Show top 5
       setError(null);

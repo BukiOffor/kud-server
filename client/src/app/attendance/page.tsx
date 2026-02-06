@@ -42,7 +42,7 @@ const AttendancePage = () => {
 
       // In a real app, device_id would be a persistent unique identifier
       // For this demo, we'll use a simple fallback or a placeholder
-      const deviceId = 'web-browser-client';
+      const deviceId = 'string';
 
       const response = await attendanceApi.sign({
         location: { lat: location.lat, lng: location.lng },

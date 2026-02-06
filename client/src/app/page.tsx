@@ -23,7 +23,8 @@ const Dashboard = () => {
         analyticsApi.getAttendanceRates(),
         eventsApi.getUpcoming()
       ]);
-      setStats(statsRes.data.message);
+      console.log(statsRes.data);
+      setStats(statsRes.data.data);
       setUpcomingEvents(eventsRes.data.slice(0, 5)); // Show top 5
       setError(null);
     } catch (err) {
@@ -37,7 +38,7 @@ const Dashboard = () => {
   const statCards = [
     { 
       name: 'Total Users', 
-      value: stats?.total_users.toString() || '...', 
+      value: stats?.total_users?.toString() || '...', 
       icon: Users, 
       color: 'text-blue-600', 
       bg: 'bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400' 
@@ -58,7 +59,7 @@ const Dashboard = () => {
     },
     { 
       name: 'User Rate', 
-      value: stats ? `${stats.user_rate.toFixed(1)}%` : '...', 
+      value: stats ? `${stats.user_rate}%` : '...', 
       icon: Clock, 
       color: 'text-orange-600', 
       bg: 'bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400' 
@@ -70,7 +71,7 @@ const Dashboard = () => {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard Overview</h1>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">Welcome back! Here's what's happening today.</p>
+          <p className="mt-1 text-gray-500 dark:text-gray-400">Welcome back! Here&apos;s what&apos;s happening today.</p>
         </div>
         <Link 
           href="/attendance"

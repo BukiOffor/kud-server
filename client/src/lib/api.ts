@@ -7,8 +7,8 @@ import {
   AttendanceStats, AttendanceSummary, UserAttendanceHistory
 } from './types';
 
-//const API_BASE_URL ='https://kud-server.duckdns.org/api/v1';
-const API_BASE_URL ='http://localhost:9898/api/v1';
+const API_BASE_URL ='https://kud-server.duckdns.org/api/v1';
+//const API_BASE_URL ='http://localhost:9898/api/v1';
 
 //const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ' https://5e188efecc5a.ngrok-free.app/api/v1';
 

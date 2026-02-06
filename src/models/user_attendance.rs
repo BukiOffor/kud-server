@@ -18,6 +18,7 @@ pub struct UserAttendance {
     pub id: Uuid,
     pub user_id: Uuid,
     pub date: NaiveDate,
+    pub week_day: String,
     pub time_in: NaiveDateTime,
     pub time_out: Option<NaiveDateTime>,
     pub event_id: Option<Uuid>,
@@ -35,6 +36,11 @@ pub enum AttendanceType {
     Remote,
     #[default]
     Onsite,
+    Mandatory,
+    Optional,
+    Standard,
+    Late,
+    Excused,
 }
 
 impl FromSql<Text, diesel::pg::Pg> for AttendanceType {
@@ -54,10 +60,12 @@ impl ToSql<Text, diesel::pg::Pg> for AttendanceType {
 
 impl UserAttendance {
     pub fn new(user_id: Uuid, date: NaiveDate) -> Self {
+        use chrono::Datelike;
         Self {
             id: Uuid::now_v7(),
             user_id,
             date,
+            week_day: date.weekday().to_string(),
             time_in: chrono::Local::now().naive_local(),
             time_out: None,
             event_id: None,

@@ -28,6 +28,7 @@ diesel::table! {
         attendance_type -> Text,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+        week_day -> Text,
     }
 }
 

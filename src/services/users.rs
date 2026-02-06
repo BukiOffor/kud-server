@@ -62,7 +62,7 @@ pub async fn seed_default_admin(pool: Arc<Pool>) -> Result<(), ModuleError> {
     Ok(())
 }
 
-pub async fn register_user(pool: Arc<Pool>, payload: NewUser) -> Result<Message, ModuleError> {
+pub async fn register_user(pool: Arc<Pool>, payload: NewUser) -> Result<Message<()>, ModuleError> {
     let mut conn = &mut pool
         .get()
         .await
@@ -157,19 +157,26 @@ pub async fn get_all_users(
 pub async fn update_user(
     pool: Arc<Pool>,
     payload: UpdateUserRequest,
-) -> Result<Message, ModuleError> {
+    id: Uuid,
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
         .map_err(|_| ModuleError::InternalError(POOL_ERROR_MSG.into()))?;
 
-    let target = schema::users::table.filter(schema::users::id.eq(payload.id));
+    let target = schema::users::table.filter(schema::users::id.eq(id));
 
     diesel::update(target)
         .set((
             payload.first_name.map(|v| schema::users::first_name.eq(v)),
             payload.last_name.map(|v| schema::users::last_name.eq(v)),
             payload.dob.map(|v| schema::users::dob.eq(v)),
+            payload.gender.map(|v| schema::users::gender.eq(v)),
+            payload.phone.map(|v| schema::users::phone.eq(v)),
+            payload.address.map(|v| schema::users::address.eq(v)),
+            payload.city.map(|v| schema::users::city.eq(v)),
+            payload.state.map(|v| schema::users::state.eq(v)),
+            payload.country.map(|v| schema::users::country.eq(v)),
         ))
         .execute(&mut conn)
         .await?;
@@ -177,7 +184,7 @@ pub async fn update_user(
     Ok("User updated successfully".into())
 }
 
-pub async fn delete_user(pool: Arc<Pool>, id: Uuid) -> Result<Message, ModuleError> {
+pub async fn delete_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
@@ -189,7 +196,7 @@ pub async fn delete_user(pool: Arc<Pool>, id: Uuid) -> Result<Message, ModuleErr
     Ok("User deleted successfully".into())
 }
 
-pub async fn deactive_user(pool: Arc<Pool>, id: Uuid) -> Result<Message, ModuleError> {
+pub async fn deactivate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
@@ -203,7 +210,7 @@ pub async fn deactive_user(pool: Arc<Pool>, id: Uuid) -> Result<Message, ModuleE
     Ok("User deactivated successfully".into())
 }
 
-pub async fn active_user(pool: Arc<Pool>, id: Uuid) -> Result<Message, ModuleError> {
+pub async fn activate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
@@ -220,7 +227,7 @@ pub async fn active_user(pool: Arc<Pool>, id: Uuid) -> Result<Message, ModuleErr
 pub async fn import_users(
     pool: Arc<Pool>,
     mut multipart: Multipart,
-) -> Result<Message, ModuleError> {
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
     let mut year_counter: HashMap<String, i64> = HashMap::new();
@@ -351,7 +358,7 @@ pub async fn export_users(
 pub async fn change_password(
     pool: Arc<Pool>,
     payload: ChangePasswordRequest,
-) -> Result<Message, ModuleError> {
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
     let password_hash = crate::helpers::password_hasher(&payload.password)?;
     diesel::update(schema::users::table)

@@ -31,7 +31,7 @@ pub async fn login(
             .secure(true) // ❌❌❌ change this to true for production
             .path("/")
             .max_age(cookie::time::Duration::days(7))
-            .same_site(cookie::SameSite::Lax)
+            .same_site(cookie::SameSite::None)
             .build();
 
         let refresh_cookie = Cookie::build(("refresh_token", token.refresh_token))

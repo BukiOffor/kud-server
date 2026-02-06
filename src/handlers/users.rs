@@ -1,5 +1,5 @@
 use super::*;
-use crate::{dto::user::*};
+use crate::dto::user::*;
 use axum::extract::Multipart;
 
 pub fn routes(state: Arc<AppState>) -> Router {
@@ -10,19 +10,23 @@ pub fn routes(state: Arc<AppState>) -> Router {
 
 pub fn user_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/get", post(get_user))
-        .route("/update", post(update_user))
-        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
-            state.clone(),
-            crate::auth::middleware::authorize,
-        )))
-        .route("/get_all", post(get_all_users))
-        .route("/delete", post(delete_user))
-        .route("/deactive", post(deactive_user))
-        .route("/register", post(register_user))
+        .route("/admin/get_all", get(get_all_users))
+        .route("/admin/delete/{id}", delete(delete_user))
+        .route("/admin/deactivate/{id}", patch(deactivate_user))
+        .route("/admin/activate/{id}", patch(activate_user))
+        .route("/admin/register", post(register_user))
+        .route("/admin/import", post(import_users))
+        .route("/admin/export", get(export_users))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
+        )))
+        .route("/get/{id}", get(get_user))
+        .route("/update", patch(update_user))
+        .route("/change-password", patch(change_password))
+        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::auth::middleware::authorize,
         )))
         .with_state(state)
 }
@@ -30,7 +34,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
 pub async fn register_user(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<NewUser>,
-) -> Result<Json<Message>, ModuleError> {
+) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::users::register_user(state.pool.clone(), payload).await?;
     Ok(Json(response))
 }
@@ -45,17 +49,18 @@ pub async fn get_user(
 
 pub async fn get_all_users(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<UserFilter>,
+    Query(payload): Query<UserFilter>,
 ) -> Result<Json<Vec<UserDto>>, ModuleError> {
     let response = services::users::get_all_users(state.pool.clone(), payload).await?;
     Ok(Json(response))
 }
 
 pub async fn update_user(
+    Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UpdateUserRequest>,
-) -> Result<Json<Message>, ModuleError> {
-    let response = services::users::update_user(state.pool.clone(), payload).await?;
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::users::update_user(state.pool.clone(), payload, user_id).await?;
     Ok(Json(response))
 }
 
@@ -63,31 +68,31 @@ pub async fn delete_user(
     Claims { .. }: Claims,
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
-) -> Result<Json<Message>, ModuleError> {
+) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::users::delete_user(state.pool.clone(), id).await?;
     Ok(Json(response))
 }
 
-pub async fn deactive_user(
+pub async fn deactivate_user(
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
-) -> Result<Json<Message>, ModuleError> {
-    let response = services::users::deactive_user(state.pool.clone(), id).await?;
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::users::deactivate_user(state.pool.clone(), id).await?;
     Ok(Json(response))
 }
 
-pub async fn active_user(
+pub async fn activate_user(
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
-) -> Result<Json<Message>, ModuleError> {
-    let response = services::users::active_user(state.pool.clone(), id).await?;
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::users::activate_user(state.pool.clone(), id).await?;
     Ok(Json(response))
 }
 
 pub async fn import_users(
     State(state): State<Arc<AppState>>,
     multipart: Multipart,
-) -> Result<Json<Message>, ModuleError> {
+) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::users::import_users(state.pool.clone(), multipart).await?;
     Ok(Json(response))
 }
@@ -102,7 +107,7 @@ pub async fn export_users(
 pub async fn change_password(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChangePasswordRequest>,
-) -> Result<Json<Message>, ModuleError> {
+) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::users::change_password(state.pool.clone(), payload).await?;
     Ok(Json(response))
 }

@@ -42,7 +42,7 @@ pub async fn update_event(
 pub async fn check_into_event(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CheckIntoEventRequest>,
-) -> Result<Json<Message>, ModuleError> {
+) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::events::check_into_event(state.pool.clone(), payload).await?;
     Ok(Json(response))
 }
@@ -59,7 +59,7 @@ pub async fn create_event(
 pub async fn delete_event(
     State(state): State<Arc<AppState>>,
     Path(event_id): Path<Uuid>,
-) -> Result<Json<Message>, ModuleError> {
+) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::events::delete_event(state.pool.clone(), event_id).await?;
     Ok(Json(response))
 }

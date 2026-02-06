@@ -1,6 +1,8 @@
 use super::*;
 use crate::dto::events::{CheckIntoEventRequest, CreateEventRequest, UpdateEventRequest};
+use crate::models::events::Location;
 use crate::models::{events::Event, user_attendance::UserAttendance};
+use crate::services::user_attendance::is_within_radius;
 use chrono::{Duration, Local};
 
 pub async fn create_event(
@@ -67,7 +69,7 @@ pub async fn update_event(
     Ok(event)
 }
 
-pub async fn delete_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Message, ModuleError> {
+pub async fn delete_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
     let count = diesel::delete(schema::events::table)
@@ -79,13 +81,13 @@ pub async fn delete_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Message, Mo
         return Err(ModuleError::Error("Event not found".into()));
     }
 
-    Ok(Message::new("Event deleted successfully"))
+    Ok(Message::new("Event deleted successfully", None))
 }
 
 pub async fn check_into_event(
     pool: Arc<Pool>,
     payload: CheckIntoEventRequest,
-) -> Result<Message, ModuleError> {
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
     let event: Event = schema::events::table
@@ -112,6 +114,34 @@ pub async fn check_into_event(
         ));
     }
 
+    match event.location {
+        Location::CHIDA => {
+        let church_location = crate::CHIDA_LOCATION
+            .get()
+            .ok_or(ModuleError::Error("Church location not set".into()))?;
+        let user_location = payload.location.ok_or(ModuleError::Error("did not get user location".into()))?;
+        if !is_within_radius(user_location, church_location.clone(), 150.0) {
+            tracing::warn!("User is not within radius");
+            return Err(ModuleError::Error(
+                    "User is not within the church radius".into(),
+                ));
+            }
+        },
+        Location::DOA => {
+            let doa_location = crate::DOA_LOCATION
+            .get()
+            .ok_or(ModuleError::Error("DOA location not set".into()))?;
+            let user_location = payload.location.ok_or(ModuleError::Error("did not get user location".into()))?;
+            if !is_within_radius(user_location, doa_location.clone(), 150.0) {
+                tracing::warn!("User is not within radius");
+                return Err(ModuleError::Error(
+                        "User is not within the DOA radius".into(),
+                    ));
+                }
+        }
+        _ => {}
+    }
+
     let today = now.date();
     let mut attendance = UserAttendance::new(payload.user_id, today);
     attendance.set_event_id(event.id);
@@ -122,7 +152,7 @@ pub async fn check_into_event(
         .execute(&mut conn)
         .await?;
 
-    Ok(Message::new("Checked in successfully"))
+    Ok(Message::new("Checked in successfully", None))
 }
 
 pub async fn get_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Event, ModuleError> {

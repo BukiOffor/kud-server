@@ -1,0 +1,2 @@
+ALTER TABLE user_attendance
+ADD COLUMN week_day TEXT NOT NULL DEFAULT 'N/A';

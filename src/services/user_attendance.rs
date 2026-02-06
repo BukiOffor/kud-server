@@ -9,13 +9,13 @@ pub async fn admin_sign_attendance(
     pool: Arc<Pool>,
     admin_id: Uuid,
     worker_id: Uuid,
-) -> Result<Message, ModuleError> {
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
-    let now = now_in_nigeria();
-    let is_valid = is_within_attendance_window(now);
-    if !is_valid {
-        return Err(ModuleError::Error("Attendance window is closed".into()));
-    }
+    // let now = now_in_nigeria();
+    // let is_valid = is_within_attendance_window(now);
+    // if !is_valid {
+    //     return Err(ModuleError::Error("Attendance window is closed".into()));
+    // }
     let today = Lagos
         .from_utc_datetime(&chrono::Utc::now().naive_utc())
         .date_naive();
@@ -25,14 +25,14 @@ pub async fn admin_sign_attendance(
         .values(&user_attendance)
         .execute(&mut conn)
         .await?;
-    Ok(Message::new("Attendance signed successfully"))
+    Ok(Message::new("Attendance signed successfully", None))
 }
 
 pub async fn sign_attendance(
     pool: Arc<Pool>,
     user_id: Uuid,
     payload: SignAttendanceRequest,
-) -> Result<Message, ModuleError> {
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
     let user: Option<User> = fetch!(
         schema::users::table,
@@ -68,14 +68,14 @@ pub async fn sign_attendance(
         .values(&user_attendance)
         .execute(&mut conn)
         .await?;
-    Ok(Message::new("Attendance signed successfully"))
+    Ok(Message::new("Attendance signed successfully, Welcome to church", None))
 }
 
 fn now_in_nigeria() -> chrono::DateTime<chrono_tz::Tz> {
     Lagos.from_utc_datetime(&chrono::Utc::now().naive_utc())
 }
 
-fn is_valid_attempt(
+pub fn is_valid_attempt(
     now: chrono::DateTime<chrono_tz::Tz>,
     payload: SignAttendanceRequest,
 ) -> Result<(), ModuleError> {
@@ -144,12 +144,12 @@ fn is_valid_attempt(
     }
 }
 
-fn is_within_radius(point1: GeoPoint, point2: GeoPoint, radius: f64) -> bool {
+pub fn is_within_radius(point1: GeoPoint, point2: GeoPoint, radius: f64) -> bool {
     let distance = helpers::haversine_meters(point1, point2);
     distance <= radius
 }
 
-fn is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
+fn _is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
     let weekday = now.weekday();
     let hour = now.hour();
     let minute = now.minute();

@@ -1,6 +1,7 @@
 pub mod events;
 pub mod user_attendance;
 pub mod users;
+pub mod analytics;
 
 use super::*;
 use diesel::prelude::*;

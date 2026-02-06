@@ -1,7 +1,7 @@
 use super::*;
 use crate::models::users::*;
 
-#[derive(Selectable, Serialize, Deserialize, Queryable)]
+#[derive(Selectable, Serialize, Deserialize, Queryable, Clone)]
 #[diesel(table_name = users)]
 pub struct UserDto {
     pub id: uuid::Uuid,
@@ -21,7 +21,6 @@ pub struct UserDto {
     pub current_roster_hall: Option<String>,
     pub current_roster_allocation: Option<String>,
     pub role: Role,
-    pub device_id: Option<String>,
     pub gender: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
@@ -85,10 +84,15 @@ pub struct UserRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserRequest {
-    pub id: uuid::Uuid,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub dob: Option<NaiveDateTime>,
+    pub gender: Option<String>,
+    pub phone: Option<String>,
+    pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

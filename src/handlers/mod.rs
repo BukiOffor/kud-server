@@ -1,3 +1,4 @@
+pub mod analytics;
 pub mod auth;
 pub mod events;
 pub mod user_attendance;
@@ -19,4 +20,5 @@ pub fn get_routes(state: Arc<AppState>) -> Router {
         .merge(users::routes(state.clone()))
         .merge(user_attendance::routes(state.clone()))
         .merge(events::routes(state.clone()))
+        .merge(analytics::routes(state.clone()))
 }

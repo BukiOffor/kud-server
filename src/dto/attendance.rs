@@ -1,16 +1,19 @@
 use super::*;
+use crate::models::user_attendance::AttendanceType;
+use chrono::{NaiveDate, NaiveDateTime};
 
-#[derive(Selectable, Serialize, Deserialize, Queryable)]
+#[derive(Selectable, Serialize, Deserialize, Queryable, Clone)]
 #[diesel(table_name = user_attendance)]
 pub struct UserAttendanceDto {
     pub id: uuid::Uuid,
     pub user_id: uuid::Uuid,
-    pub date: NaiveDateTime,
+    pub date: NaiveDate,
+    pub week_day: String,
     pub time_in: NaiveDateTime,
     pub time_out: Option<NaiveDateTime>,
     pub marked_by: Option<uuid::Uuid>,
     pub event_id: Option<uuid::Uuid>,
-    pub attendance_type: String,
+    pub attendance_type: AttendanceType,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -38,9 +41,3 @@ pub struct SignAttendanceRequest {
     pub location: GeoPoint,
     pub device_id: String,
 }
-
-// chida event centre = 9.070818996337124, 7.434377769114212
-
-// doa = 9.076560214946829, 7.431590122491971
-
-// house = 9.110356556451427, 7.380244362342951

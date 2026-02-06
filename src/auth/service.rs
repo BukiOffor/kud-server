@@ -31,14 +31,14 @@ pub async fn login(
             .secure(true) // ❌❌❌ change this to true for production
             .path("/")
             .max_age(cookie::time::Duration::days(7))
-            .same_site(cookie::SameSite::None)
+            .same_site(cookie::SameSite::Strict)
             .build();
 
         let refresh_cookie = Cookie::build(("refresh_token", token.refresh_token))
             .path("/")
             .http_only(true)
             .secure(true) // ❌❌❌ change this to true for production
-            .same_site(cookie::SameSite::None)
+            .same_site(cookie::SameSite::Strict)
             .max_age(cookie::time::Duration::days(8))
             .build();
 

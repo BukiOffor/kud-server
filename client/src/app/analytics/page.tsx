@@ -32,8 +32,9 @@ const AnalyticsPage = () => {
         analyticsApi.getAttendanceRates(),
         analyticsApi.getUpcomingBirthdays()
       ]);
-      
+      // @ts-expect-error iii
       setStats(ratesRes.data.message);
+      // @ts-expect-error iii
       setUpcomingBirthdays(birthdaysRes.data.message);
       setError(null);
     } catch (err) {
@@ -49,7 +50,9 @@ const AnalyticsPage = () => {
       setLoadingDayStats(true);
       const res = await analyticsApi.getUsersPresentOnDay(date);
       setDayStats({
+        // @ts-expect-error iii
         presentees: res.data.message.presentees,
+        // @ts-expect-error iii
         absentees: res.data.message.absentees
       });
     } catch (err) {

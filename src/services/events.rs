@@ -87,6 +87,7 @@ pub async fn delete_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Message<()>
 pub async fn check_into_event(
     pool: Arc<Pool>,
     payload: CheckIntoEventRequest,
+    requester_role: crate::models::users::Role,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
@@ -102,50 +103,59 @@ pub async fn check_into_event(
     let start_time = event.date.and_time(event.time);
     let end_time = start_time + Duration::minutes(event.grace_period_in_minutes as i64);
 
-    // Simple window check
+    let is_admin = matches!(
+        requester_role,
+        crate::models::users::Role::Admin | crate::models::users::Role::Technical
+    );
     if now < start_time {
-        // Optionally allow checking in slightly early? User didn't specify. Strict for now.
         return Err(ModuleError::Error("Event has not started yet".into()));
     }
-
-    if now > end_time {
-        return Err(ModuleError::Error(
-            "Event check-in window has closed".into(),
-        ));
-    }
-
-    match event.location {
-        Location::CHIDA => {
-        let church_location = crate::CHIDA_LOCATION
-            .get()
-            .ok_or(ModuleError::Error("Church location not set".into()))?;
-        let user_location = payload.location.ok_or(ModuleError::Error("did not get user location".into()))?;
-        if !is_within_radius(user_location, church_location.clone(), 150.0) {
-            tracing::warn!("User is not within radius");
+    // Simple window check
+    if !is_admin {
+        if now > end_time {
             return Err(ModuleError::Error(
-                    "User is not within the church radius".into(),
-                ));
+                "Event check-in window has closed".into(),
+            ));
+        }
+    }
+    if !is_admin {
+        match event.location {
+            Location::CHIDA => {
+                let church_location = crate::CHIDA_LOCATION
+                    .get()
+                    .ok_or(ModuleError::Error("Church location not set".into()))?;
+                let user_location = payload
+                    .location
+                    .ok_or(ModuleError::Error("did not get user location".into()))?;
+                if !is_within_radius(user_location, church_location.clone(), 150.0) {
+                    tracing::warn!("User is not within radius");
+                    return Err(ModuleError::Error(
+                        "User is not within the church radius".into(),
+                    ));
+                }
             }
-        },
-        Location::DOA => {
-            let doa_location = crate::DOA_LOCATION
-            .get()
-            .ok_or(ModuleError::Error("DOA location not set".into()))?;
-            let user_location = payload.location.ok_or(ModuleError::Error("did not get user location".into()))?;
-            if !is_within_radius(user_location, doa_location.clone(), 150.0) {
-                tracing::warn!("User is not within radius");
-                return Err(ModuleError::Error(
+            Location::DOA => {
+                let doa_location = crate::DOA_LOCATION
+                    .get()
+                    .ok_or(ModuleError::Error("DOA location not set".into()))?;
+                let user_location = payload
+                    .location
+                    .ok_or(ModuleError::Error("did not get user location".into()))?;
+                if !is_within_radius(user_location, doa_location.clone(), 150.0) {
+                    tracing::warn!("User is not within radius");
+                    return Err(ModuleError::Error(
                         "User is not within the DOA radius".into(),
                     ));
                 }
+            }
+            _ => {}
         }
-        _ => {}
     }
 
     let today = now.date();
     let mut attendance = UserAttendance::new(payload.user_id, today);
     attendance.set_event_id(event.id);
-    attendance.set_attendance_type(payload.attendance_type);
+    attendance.set_attendance_type(event.attendance_type);
 
     diesel::insert_into(schema::user_attendance::table)
         .values(&attendance)
@@ -153,6 +163,34 @@ pub async fn check_into_event(
         .await?;
 
     Ok(Message::new("Checked in successfully", None))
+}
+
+pub async fn check_in_with_identifier(
+    pool: Arc<Pool>,
+    payload: crate::dto::events::CheckInWithIdentifierRequest,
+    requester_role: crate::models::users::Role,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    let user_id = schema::users::table
+        .filter(
+            schema::users::email
+                .eq(&payload.identifier)
+                .or(schema::users::reg_no.eq(&payload.identifier)),
+        )
+        .select(schema::users::id)
+        .first::<Uuid>(&mut conn)
+        .await
+        .map_err(|_| ModuleError::Error("User not found with provided email or Reg No".into()))?;
+
+    let check_in_payload = CheckIntoEventRequest {
+        event_id: payload.event_id,
+        user_id,
+        attendance_type: payload.attendance_type,
+        location: payload.location,
+    };
+
+    check_into_event(pool.clone(), check_in_payload, requester_role).await
 }
 
 pub async fn get_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Event, ModuleError> {

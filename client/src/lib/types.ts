@@ -28,6 +28,7 @@ export interface UserDto {
   city?: string;
   state?: string;
   country?: string;
+  is_active: boolean;
 }
 
 export interface Event {
@@ -73,6 +74,13 @@ export interface UpdateEventRequest {
 export interface CheckIntoEventRequest {
   event_id: string;
   user_id: string;
+  attendance_type: string;
+  location?: GeoPoint;
+}
+
+export interface CheckInWithIdentifierRequest {
+  event_id: string;
+  identifier: string;
   attendance_type: string;
   location?: GeoPoint;
 }
@@ -138,6 +146,8 @@ export interface AttendanceStats {
   user_rate: number;
   technical_rate: number;
   total_users: number;
+  active_users: number;
+  suspended_users: number;
 }
 
 export interface AttendanceSummary {
@@ -153,5 +163,21 @@ export interface UserAttendanceHistory {
 }
 
 export interface Message<T = void> {
-  message: T extends void ? string : T;
+  message: string;
+  data: T;
+}
+
+export interface EventAttendee {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  time_in: string; // NaiveTime as string
+}
+
+export interface EventStatsReport {
+  total_attendees: number;
+  eligible_attendees_count: number;
+  attendees: EventAttendee[];
+  absentees: UserDto[];
 }

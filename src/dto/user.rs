@@ -29,6 +29,7 @@ pub struct UserDto {
     pub city: Option<String>,
     pub state: Option<String>,
     pub country: Option<String>,
+    pub is_active: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +98,11 @@ pub struct UpdateUserRequest {
     pub country: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateUserRoleRequest {
+    pub role: Role,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UserFilter {
     pub page: Option<i64>,
@@ -142,12 +148,12 @@ impl CsvUser {
         let cleaned_year = self.year_joined.replace("Year ", "").trim().to_string();
         if cleaned_year.parse::<i32>().is_ok() {
             self.year_joined = cleaned_year;
-        }else {
+        } else {
             self.year_joined = "2025".to_string();
         }
     }
 
-    pub fn to_new_user(&self, ) -> Result<NewUser, ModuleError> {
+    pub fn to_new_user(&self) -> Result<NewUser, ModuleError> {
         let dob = self.dob.clone();
         let dob = NaiveDate::parse_from_str(&dob, "%m/%d/%y")
             .map_err(|_| ModuleError::Error("Invalid date format".to_string().into()))?;

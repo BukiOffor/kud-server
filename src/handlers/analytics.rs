@@ -13,13 +13,15 @@ pub fn analytics_routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/total-users", get(get_total_users))
         .route("/users-on-day", get(get_users_present_on_day))
-        .route("/upcoming-birthdays", get(get_upcoming_birthdays))
         .route("/attendance-rates", get(get_attendance_rates))
-        .route("/user-attendance/{id}", get(get_user_attendance))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
         )))
+         .route("/users-on-day/{date}", get(get_users_present_on_day))
+        .route("/user-attendance/{id}", get(get_user_attendance))
+        .route("/upcoming-birthdays", get(get_upcoming_birthdays))
+        .route("/event-report/{id}", get(get_event_stats_report))
         .with_state(state)
 }
 
@@ -45,7 +47,7 @@ pub async fn get_users_present_on_day(
         .await
         .map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
     let date = date.get("date").ok_or(ModuleError::BadRequest(
-        "Date is required".to_string().into()
+        "Date is required".to_string().into(),
     ))?;
     let response =
         services::analytics::fetch_users_present_on_a_specific_day(&mut conn, *date).await?;
@@ -88,3 +90,18 @@ pub async fn get_user_attendance(
     let response = services::analytics::fetch_user_attendance(&mut conn, id).await?;
     Ok(Json(response))
 }
+
+pub async fn get_event_stats_report(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<Message<crate::dto::analytics::EventStatsReport>>, ModuleError> {
+    let mut conn = state
+        .pool
+        .get()
+        .await
+        .map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
+    let response = services::analytics::fetch_event_stats_report(&mut conn, id).await?;
+    Ok(Json(response))
+}
+
+

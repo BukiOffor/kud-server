@@ -1,5 +1,6 @@
 use crate::dto::{analytics::*, user::UserDto};
 use chrono::NaiveDate;
+use diesel::dsl::count_distinct;
 use diesel_async::AsyncConnection;
 
 use super::*;
@@ -43,12 +44,12 @@ pub async fn fetch_user_attendance(
 
     // 3. Calculate statistics
     // We define total days as unique dates in user_attendance table (global events)
-    let total_days: i64 = user_attendance::table
-        .select(user_attendance::date)
-        .distinct()
-        .count()
-        .get_result(conn)
-        .await?;
+   let total_days: i64 = user_attendance::table
+    .select(count_distinct(user_attendance::date))
+    .get_result(conn)
+    .await?;
+
+    tracing::debug!("Total days: {}", total_days);
 
     let days_present = history.len() as i64;
     let rate = if total_days == 0 {
@@ -97,8 +98,7 @@ pub async fn fetch_users_present_on_a_specific_day(
         user_attendance::table
             .filter(user_attendance::date.eq(date))
             .select(user_attendance::date)
-            .distinct()
-            ,
+            .distinct(),
         conn,
     )
     .await?;
@@ -145,7 +145,7 @@ pub async fn fetch_upcoming_birthdays(
     conn: &mut impl AsyncConnection<Backend = diesel::pg::Pg>,
 ) -> Result<Message<Vec<UserDto>>, ModuleError> {
     use crate::schema::users;
-    use chrono::{Datelike, Local, NaiveDate};
+    use chrono::{Datelike, Local};
     use diesel_async::RunQueryDsl;
 
     // 1. Fetch all active users with a date of birth
@@ -159,65 +159,21 @@ pub async fn fetch_upcoming_birthdays(
     .await?;
 
     let today = Local::now().naive_local().date();
-    let thirty_days_later = today + chrono::Duration::days(30);
+    let current_month = today.month();
 
     let mut upcoming_birthdays: Vec<UserDto> = active_users
         .into_iter()
         .filter(|u| {
             if let Some(dob) = u.dob {
-                let dob_date = dob.date();
-                // Check if birthday falls between today and 30 days later
-                // We need to handle year transition
-                let years_to_check = [today.year(), thirty_days_later.year()];
-
-                years_to_check.iter().any(|&year| {
-                    if let Some(bday_this_year) =
-                        NaiveDate::from_ymd_opt(year, dob_date.month(), dob_date.day())
-                    {
-                        bday_this_year >= today && bday_this_year <= thirty_days_later
-                    } else {
-                        // Handle Feb 29 for non-leap years
-                        if dob_date.month() == 2 && dob_date.day() == 29 {
-                            if let Some(bday_this_year) = NaiveDate::from_ymd_opt(year, 2, 28) {
-                                bday_this_year >= today && bday_this_year <= thirty_days_later
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                })
+                dob.date().month() == current_month
             } else {
                 false
             }
         })
         .collect();
 
-    // Sort by proximity to today
-    upcoming_birthdays.sort_by_cached_key(|u| {
-        let dob_date = u.dob.unwrap().date();
-        let mut bday = NaiveDate::from_ymd_opt(today.year(), dob_date.month(), dob_date.day())
-            .unwrap_or_else(|| {
-                if dob_date.month() == 2 && dob_date.day() == 29 {
-                    NaiveDate::from_ymd_opt(today.year(), 2, 28).unwrap()
-                } else {
-                    today // Should not happen
-                }
-            });
-
-        if bday < today {
-            bday = NaiveDate::from_ymd_opt(today.year() + 1, dob_date.month(), dob_date.day())
-                .unwrap_or_else(|| {
-                    if dob_date.month() == 2 && dob_date.day() == 29 {
-                        NaiveDate::from_ymd_opt(today.year() + 1, 2, 28).unwrap()
-                    } else {
-                        today + chrono::Duration::days(365)
-                    }
-                });
-        }
-        bday
-    });
+    // Sort by day of month
+    upcoming_birthdays.sort_by_key(|u| u.dob.unwrap().date().day());
 
     Ok(Message::new(
         "Upcoming birthdays retrieved successfully",
@@ -234,18 +190,21 @@ pub async fn fetch_attendance_rates(
     use diesel_async::RunQueryDsl;
 
     // 1. Get total events count
-    //let total_events: i64 = events::table.count().get_result(conn).await?;
     let total_events: i64 = user_attendance::table
-        .select(user_attendance::date)
-        .distinct()
-        .count()
+        .select(count_distinct(user_attendance::date))
         .get_result(conn)
         .await?;
 
-    let total_users: Vec<uuid::Uuid> = users::table
-        .select(users::id)
-        .load::<uuid::Uuid>(conn)
+    // 2. Fetch all users with their roles and status
+    let all_users: Vec<(uuid::Uuid, Role, bool)> = users::table
+        .select((users::id, users::role, users::is_active))
+        .load::<(uuid::Uuid, Role, bool)>(conn)
         .await?;
+
+    let total_users_count = all_users.len() as i64;
+    let active_users_list: Vec<&(uuid::Uuid, Role, bool)> =
+        all_users.iter().filter(|(_, _, active)| *active).collect();
+    let suspended_users_count = total_users_count - active_users_list.len() as i64;
 
     if total_events == 0 {
         return Ok(Message::new(
@@ -254,33 +213,27 @@ pub async fn fetch_attendance_rates(
                 admin_rate: 0.0,
                 user_rate: 0.0,
                 technical_rate: 0.0,
-                total_users: total_users.len() as i64,
+                total_users: total_users_count,
+                active_users: active_users_list.len() as i64,
+                suspended_users: suspended_users_count,
             }),
         ));
     }
 
-    // 2. Fetch all active users with their roles
-    let active_users: Vec<(uuid::Uuid, Role)> = users::table
-        .filter(users::is_active.eq(true))
-        .select((users::id, users::role))
-        .load::<(uuid::Uuid, Role)>(conn)
-        .await?;
-
-    let admin_count = active_users
+    let admin_count = active_users_list
         .iter()
-        .filter(|(_, r)| matches!(r, Role::Admin))
+        .filter(|(_, r, _)| matches!(r, Role::Admin))
         .count() as f64;
-    let user_count = active_users
+    let user_count = active_users_list
         .iter()
-        .filter(|(_, r)| matches!(r, Role::User))
+        .filter(|(_, r, _)| matches!(r, Role::User))
         .count() as f64;
-    let technical_count = active_users
+    let technical_count = active_users_list
         .iter()
-        .filter(|(_, r)| matches!(r, Role::Technical))
+        .filter(|(_, r, _)| matches!(r, Role::Technical))
         .count() as f64;
 
     // 3. Fetch all attendance records count grouped by role
-    // We join user_attendance with users to get the role of the user who attended
     let attendances: Vec<(uuid::Uuid, Role)> = user_attendance::table
         .inner_join(users::table.on(user_attendance::user_id.eq(users::id)))
         .filter(users::is_active.eq(true))
@@ -313,11 +266,72 @@ pub async fn fetch_attendance_rates(
         admin_rate: calculate_rate(admin_attendances, admin_count, total_events),
         user_rate: calculate_rate(user_attendances, user_count, total_events),
         technical_rate: calculate_rate(technical_attendances, technical_count, total_events),
-        total_users: total_users.len() as i64,
+        total_users: total_users_count,
+        active_users: active_users_list.len() as i64,
+        suspended_users: suspended_users_count,
     };
 
     Ok(Message::new(
         "Attendance rates retrieved successfully",
         Some(stats),
+    ))
+}
+
+pub async fn fetch_event_stats_report(
+    conn: &mut impl AsyncConnection<Backend = diesel::pg::Pg>,
+    event_id: uuid::Uuid,
+) -> Result<Message<EventStatsReport>, ModuleError> {
+    use crate::schema::{user_attendance, users};
+    use diesel::prelude::*;
+    use diesel_async::RunQueryDsl;
+
+    let attendees = user_attendance::table
+        .inner_join(users::table.on(user_attendance::user_id.eq(users::id)))
+        .filter(user_attendance::event_id.eq(event_id))
+        .select((
+            users::id,
+            users::first_name,
+            users::last_name,
+            users::email,
+            user_attendance::time_in,
+        ))
+        .load::<(uuid::Uuid, String, String, String, chrono::NaiveDateTime)>(conn)
+        .await?;
+
+    let event_attendees = attendees
+        .into_iter()
+        .map(|(id, first, last, email, time_in)| EventAttendee {
+            user_id: id,
+            first_name: first,
+            last_name: last,
+            email,
+            time_in: time_in.time(),
+        })
+        .collect::<Vec<_>>();
+
+    let total_attendees = event_attendees.len() as i64;
+
+    let absentees = users::table
+        .left_outer_join(
+            user_attendance::table.on(user_attendance::user_id
+                .eq(users::id)
+                .and(user_attendance::event_id.eq(Some(event_id)))),
+        )
+        .filter(users::is_active.eq(true))
+        .filter(user_attendance::id.is_null())
+        .select(UserDto::as_select())
+        .load::<UserDto>(conn)
+        .await?;
+
+    let eligible_attendees_count = total_attendees + absentees.len() as i64;
+
+    Ok(Message::new(
+        "Event stats report retrieved successfully",
+        Some(EventStatsReport {
+            total_attendees,
+            eligible_attendees_count,
+            attendees: event_attendees,
+            absentees,
+        }),
     ))
 }

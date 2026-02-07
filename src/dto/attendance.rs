@@ -41,3 +41,8 @@ pub struct SignAttendanceRequest {
     pub location: GeoPoint,
     pub device_id: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminSignAttendanceRequest {
+    pub attendance_type: AttendanceType,
+}

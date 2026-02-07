@@ -14,6 +14,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/admin/delete/{id}", delete(delete_user))
         .route("/admin/deactivate/{id}", patch(deactivate_user))
         .route("/admin/activate/{id}", patch(activate_user))
+        .route("/admin/update-role/{id}", patch(update_user_role))
         .route("/admin/register", post(register_user))
         .route("/admin/import", post(import_users))
         .route("/admin/export", get(export_users))
@@ -86,6 +87,15 @@ pub async fn activate_user(
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::users::activate_user(state.pool.clone(), id).await?;
+    Ok(Json(response))
+}
+
+pub async fn update_user_role(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<uuid::Uuid>,
+    Json(payload): Json<UpdateUserRoleRequest>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::users::update_user_role(state.pool.clone(), id, payload).await?;
     Ok(Json(response))
 }
 

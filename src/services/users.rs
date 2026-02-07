@@ -141,7 +141,7 @@ pub async fn get_all_users(
         );
     }
 
-    let limit = payload.limit.unwrap_or(10);
+    let limit = payload.limit.unwrap_or(300);
     let offset = (payload.page.unwrap_or(1) - 1) * limit;
 
     let users = query
@@ -222,6 +222,24 @@ pub async fn activate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, Mod
         .await?;
 
     Ok("User activated successfully".into())
+}
+
+pub async fn update_user_role(
+    pool: Arc<Pool>,
+    id: Uuid,
+    payload: UpdateUserRoleRequest,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool
+        .get()
+        .await
+        .map_err(|_| ModuleError::InternalError(POOL_ERROR_MSG.into()))?;
+
+    diesel::update(schema::users::table.find(id))
+        .set(schema::users::role.eq(payload.role))
+        .execute(&mut conn)
+        .await?;
+
+    Ok("User role updated successfully".into())
 }
 
 pub async fn import_users(

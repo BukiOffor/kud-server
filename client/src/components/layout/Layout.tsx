@@ -1,17 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
+import { isAuthenticated } from '@/lib/auth';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const isLoginPage = pathname === '/login';
+
+  useEffect(() => {
+    // Check authentication for protected routes
+    if (!isLoginPage && pathname !== '/') {
+      if (!isAuthenticated()) {
+        router.replace('/login');
+      } else {
+        setIsChecking(false);
+      }
+    } else {
+      setIsChecking(false);
+    }
+  }, [pathname, router, isLoginPage]);
 
   if (isLoginPage) {
     return <div className="min-h-screen bg-gray-50 dark:bg-gray-900">{children}</div>;
+  }
+
+  // Show loading state while checking auth
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
   }
 
   return (

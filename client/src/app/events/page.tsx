@@ -7,6 +7,7 @@ import { Calendar, MapPin, Clock, UserCheck, Plus, Trash2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import CreateEventForm from './CreateEventForm';
 import CheckInForm from './CheckInForm';
+import EventReportModal from './EventReportModal';
 
 const EventsPage = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -14,11 +15,20 @@ const EventsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventTitle, setSelectedEventTitle] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
     fetchEvents();
   }, []);
+
+  const isAdminOrTech = user?.role === 'Admin' || user?.role === 'Technical';
 
   const fetchEvents = async () => {
     try {
@@ -49,17 +59,87 @@ const EventsPage = () => {
     setIsCheckInModalOpen(true);
   };
 
+  const handleViewReport = (eventId: string, title: string) => {
+    setSelectedEventId(eventId);
+    setSelectedEventTitle(title);
+    setIsReportModalOpen(true);
+  };
+
+  const isEventConcluded = (dateStr: string, timeStr: string) => {
+    try {
+      const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+      return eventDateTime < new Date();
+    } catch {
+      return false;
+    }
+  };
+
+  const isEventActive = (dateStr: string, timeStr: string, graceMinutes: number) => {
+    try {
+      const start = new Date(`${dateStr}T${timeStr}`);
+      const end = new Date(start.getTime() + (graceMinutes || 30) * 60000);
+      const now = new Date();
+      return now >= start && now <= end;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleSelfCheckIn = async (event: Event) => {
+    if (!user) {
+      alert('Please log in to check in.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let location: any = undefined;
+      
+      try {
+        const pos: any = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { 
+            timeout: 10000,
+            enableHighAccuracy: true
+          });
+        });
+        location = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+      } catch (err) {
+        console.warn('Geolocation failed:', err);
+      }
+
+      await eventsApi.checkIn({
+        event_id: event.id,
+        user_id: user.id || user.user_id,
+        attendance_type: 'Standard',
+        location
+      });
+      
+      alert('Successfully checked in!');
+      fetchEvents();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to check in. Please ensure you are at the correct location.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Events Management</h1>
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          <Plus className="me-2 h-5 w-5" />
-          Create Event
-        </button>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Events</h1>
+        {isAdminOrTech && (
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
+            <Plus className="me-2 h-5 w-5" />
+            Create Event
+          </button>
+        )}
       </div>
 
       {error && (
@@ -98,20 +178,52 @@ const EventsPage = () => {
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-2">
-                <button 
-                  onClick={() => handleCheckInClick(event.id)}
-                  className="flex flex-1 items-center justify-center rounded-lg border border-gray-200 bg-white py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-blue-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                >
-                  <UserCheck className="me-2 h-4 w-4" />
-                  Check-ins
-                </button>
-                <button 
-                  onClick={() => handleDelete(event.id)}
-                  className="rounded-lg border border-red-200 bg-white p-2 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-gray-800 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+              <div className="mt-6 flex flex-col gap-2">
+                {isEventActive(event.date, event.time, event.grace_period_in_minutes) && (
+                  <button 
+                    onClick={() => handleSelfCheckIn(event)}
+                    className="flex w-full items-center justify-center rounded-lg bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                  >
+                    <UserCheck className="me-2 h-4 w-4" />
+                    Check In Now
+                  </button>
+                )}
+
+                {isAdminOrTech && (
+                  <>
+                    <div className="flex gap-2">
+                      {!isEventActive(event.date, event.time, event.grace_period_in_minutes) && (
+                        <button 
+                          onClick={() => handleSelfCheckIn(event)}
+                          className="flex flex-1 items-center justify-center rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                          <UserCheck className="me-2 h-4 w-4" />
+                          Self Check-in
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => handleCheckInClick(event.id)}
+                        className="flex flex-1 items-center justify-center rounded-lg border border-gray-200 bg-white py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-blue-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                      >
+                        Check-in Others
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(event.id)}
+                        className="rounded-lg border border-red-200 bg-white p-2 text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-gray-800 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {isEventConcluded(event.date, event.time) && (
+                      <button 
+                        onClick={() => handleViewReport(event.id, event.title)}
+                        className="flex w-full items-center justify-center rounded-lg bg-gray-50 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:bg-gray-700/50 dark:text-blue-400 dark:hover:bg-gray-700"
+                      >
+                        View Attendance Report
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -154,6 +266,18 @@ const EventsPage = () => {
           />
         )}
       </Modal>
+
+      {selectedEventId && (
+        <EventReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => {
+            setIsReportModalOpen(false);
+            setSelectedEventId(null);
+          }}
+          eventId={selectedEventId}
+          eventTitle={selectedEventTitle}
+        />
+      )}
     </div>
   );
 };

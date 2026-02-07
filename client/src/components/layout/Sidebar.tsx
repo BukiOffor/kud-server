@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, Users, Calendar, Settings, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { logout } from '@/lib/auth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,17 +29,20 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   }, [pathname, setIsOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    logout();
     router.push('/login');
   };
 
   const menuItems = [
-    { name: 'Dashboard', icon: Home, href: '/' },
-    { name: 'Users', icon: Users, href: '/users' },
+    { name: 'Dashboard', icon: Home, href: '/dashboard' },
+    { name: 'Users', icon: Users, href: '/users', roles: ['Admin', 'Technical'] },
     { name: 'Events', icon: Calendar, href: '/events' },
     { name: 'Settings', icon: Settings, href: '/settings' },
   ];
+
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.roles || (user && item.roles.includes(user.role))
+  );
 
   return (
     <>
@@ -57,12 +61,12 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
       >
         <div className="flex h-full flex-col px-3 py-4">
           <div className="mb-8 flex items-center justify-between px-2">
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">KUD Admin</span>
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">KUD management system</span>
             <button 
               onClick={() => setIsOpen(false)}
               className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 sm:hidden dark:text-gray-400 dark:hover:bg-gray-700"
             >
-              <Users className="h-6 w-6 rotate-90" /> {/* Using Users as placeholder for close, or just use X if available */}
+              <Users className="h-6 w-6 rotate-90" />
             </button>
           </div>
           
@@ -75,7 +79,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
           )}
 
           <ul className="space-y-2 font-medium">
-            {menuItems.map((item) => (
+            {filteredMenuItems.map((item) => (
               <li key={item.name}>
                 <Link
                   href={item.href}

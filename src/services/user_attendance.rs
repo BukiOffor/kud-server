@@ -11,11 +11,11 @@ pub async fn admin_sign_attendance(
     worker_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
-    // let now = now_in_nigeria();
-    // let is_valid = is_within_attendance_window(now);
-    // if !is_valid {
-    //     return Err(ModuleError::Error("Attendance window is closed".into()));
-    // }
+    let now = now_in_nigeria();
+    let is_valid = is_within_attendance_window(now);
+    if !is_valid {
+        return Err(ModuleError::Error("Attendance window is closed".into()));
+    }
     let today = Lagos
         .from_utc_datetime(&chrono::Utc::now().naive_utc())
         .date_naive();
@@ -68,7 +68,10 @@ pub async fn sign_attendance(
         .values(&user_attendance)
         .execute(&mut conn)
         .await?;
-    Ok(Message::new("Attendance signed successfully, Welcome to church", None))
+    Ok(Message::new(
+        "Attendance signed successfully, Welcome to church",
+        None,
+    ))
 }
 
 fn now_in_nigeria() -> chrono::DateTime<chrono_tz::Tz> {
@@ -149,7 +152,7 @@ pub fn is_within_radius(point1: GeoPoint, point2: GeoPoint, radius: f64) -> bool
     distance <= radius
 }
 
-fn _is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
+fn is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
     let weekday = now.weekday();
     let hour = now.hour();
     let minute = now.minute();

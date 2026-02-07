@@ -4,12 +4,12 @@ import {
   NewUser, UserFilter, UpdateUserRequest, Message,
   CreateEventRequest, UpdateEventRequest, ChangePasswordRequest,
   SignAttendanceRequest, UserAttendanceDto, UserPresentStats,
-  AttendanceStats, AttendanceSummary, UserAttendanceHistory
+  AttendanceStats, AttendanceSummary, UserAttendanceHistory, EventStatsReport,
+  CheckInWithIdentifierRequest, Role
 } from './types';
 
-const API_BASE_URL ='https://api.koinoniaushers.cloud/api/v1';
-
-//const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ' https://5e188efecc5a.ngrok-free.app/api/v1';
+//const API_BASE_URL ='https://api.koinoniaushers.cloud/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9898/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -45,6 +45,7 @@ export const eventsApi = {
   update: (payload: UpdateEventRequest) => api.patch<Event>('/events/update', payload),
   delete: (id: string) => api.delete<Message>(`/events/delete/${id}`),
   checkIn: (payload: CheckIntoEventRequest) => api.post<Message>('/events/attendance/check-in', payload),
+  checkInWithIdentifier: (payload: CheckInWithIdentifierRequest) => api.post<Message>('/events/attendance/check-in-identifier', payload),
 };
 
 export const usersApi = {
@@ -52,8 +53,10 @@ export const usersApi = {
   getAll: () => api.get<UserDto[]>('/users/admin/get_all'),
   register: (payload: NewUser) => api.post<Message>('/users/admin/register', payload),
   update: (payload: UpdateUserRequest) => api.post<Message>('/users/update', payload),
-  delete: (id: string) => api.post<Message>(`/users/admin/delete/${id}`),
-  deactivate: (id: string) => api.post<Message>(`/users/admin/deactive/${id}`),
+  delete: (id: string) => api.delete<Message>(`/users/admin/delete/${id}`),
+  deactivate: (id: string) => api.patch<Message>(`/users/admin/deactivate/${id}`),
+  activate: (id: string) => api.patch<Message>(`/users/admin/activate/${id}`),
+  updateRole: (id: string, role: Role) => api.patch<Message>(`/users/admin/update-role/${id}`, { role }),
   changePassword: (payload: ChangePasswordRequest) => api.post<Message>('/users/change_password', payload),
   importUsers: (formData: FormData) => api.post<Message>('/users/admin/import', formData, {
     headers: {
@@ -73,6 +76,7 @@ export const analyticsApi = {
   getUpcomingBirthdays: () => api.get<Message<UserDto[]>>('/analytics/upcoming-birthdays'),
   getAttendanceRates: () => api.get<Message<AttendanceStats>>('/analytics/attendance-rates'),
   getUserAttendance: (userId: string) => api.get<Message<UserAttendanceHistory>>(`/analytics/user-attendance/${userId}`),
+  getEventReport: (eventId: string) => api.get<Message<EventStatsReport>>(`/analytics/event-report/${eventId}`),
 };
 
 export default api;

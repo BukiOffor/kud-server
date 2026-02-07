@@ -16,6 +16,14 @@ pub struct CreateEventRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckInWithIdentifierRequest {
+    pub event_id: Uuid,
+    pub identifier: String,
+    pub attendance_type: AttendanceType,
+    pub location: Option<GeoPoint>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckIntoEventRequest {
     pub event_id: Uuid,
     pub user_id: Uuid,

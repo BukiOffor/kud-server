@@ -11,7 +11,7 @@ interface CheckInFormProps {
 }
 
 const CheckInForm = ({ eventId, onSuccess, onCancel }: CheckInFormProps) => {
-  const [userId, setUserId] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [attendanceType, setAttendanceType] = useState('Standard');
   const [loading, setLoading] = useState(false);
 
@@ -19,14 +19,15 @@ const CheckInForm = ({ eventId, onSuccess, onCancel }: CheckInFormProps) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await eventsApi.checkIn({
+      await eventsApi.checkInWithIdentifier({
         event_id: eventId,
-        user_id: userId,
+        identifier: identifier,
         attendance_type: attendanceType,
       });
       onSuccess();
-    } catch (err) {
-      alert('Failed to check in user. Ensure the User ID is valid.');
+    } catch (err: any) {
+      console.log(err);
+      alert(err.response?.data?.message || 'Failed to check in user. Ensure the Email or Reg No is valid.');
     } finally {
       setLoading(false);
     }
@@ -35,14 +36,14 @@ const CheckInForm = ({ eventId, onSuccess, onCancel }: CheckInFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">User ID (UUID)</label>
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">User Identifier (Email or Reg No)</label>
         <input
           required
           type="text"
-          placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+          placeholder="e.g. user@example.com or 2024/KUD/001"
           className="w-full rounded-lg border border-gray-300 p-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
         />
       </div>
       <div>

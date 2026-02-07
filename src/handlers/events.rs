@@ -19,6 +19,10 @@ pub fn event_routes(state: Arc<AppState>) -> Router {
             crate::auth::middleware::admin_authorize,
         )))
         .route("/attendance/check-in", post(check_into_event))
+        .route(
+            "/attendance/check-in-identifier",
+            post(check_into_event_with_identifier),
+        )
         .route("/upcoming", get(get_upcoming_events))
         .route("/past", get(get_past_events))
         .route("/", get(get_events))
@@ -40,10 +44,21 @@ pub async fn update_event(
 }
 
 pub async fn check_into_event(
+    Claims { role, .. }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CheckIntoEventRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::events::check_into_event(state.pool.clone(), payload).await?;
+    let response = services::events::check_into_event(state.pool.clone(), payload, role).await?;
+    Ok(Json(response))
+}
+
+pub async fn check_into_event_with_identifier(
+    Claims { role, .. }: Claims,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<crate::dto::events::CheckInWithIdentifierRequest>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response =
+        services::events::check_in_with_identifier(state.pool.clone(), payload, role).await?;
     Ok(Json(response))
 }
 

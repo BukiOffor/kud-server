@@ -10,15 +10,15 @@ pub fn routes(state: Arc<AppState>) -> Router {
 
 pub fn user_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/check-in", post(sign_attendance))
-        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
-            state.clone(),
-            crate::auth::middleware::authorize,
-        )))
         .route("/admin/sign/{id}", get(admin_sign_attendance))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
+        )))
+        .route("/check-in", post(sign_attendance))
+        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::auth::middleware::authorize,
         )))
         .with_state(state)
 }

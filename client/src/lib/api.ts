@@ -8,8 +8,8 @@ import {
   CheckInWithIdentifierRequest, Role
 } from './types';
 
-//const API_BASE_URL ='https://api.koinoniaushers.cloud/api/v1';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9898/api/v1';
+const API_BASE_URL ='https://api.koinoniaushers.cloud/api/v1';
+//const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9898/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

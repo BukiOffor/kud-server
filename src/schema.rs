@@ -17,7 +17,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    user_attendance (id) {
+    user_attendance (id, date, attendance_type) {
         id -> Uuid,
         user_id -> Uuid,
         date -> Date,
@@ -64,8 +64,4 @@ diesel::table! {
 diesel::joinable!(events -> users (created_by));
 diesel::joinable!(user_attendance -> events (event_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    events,
-    user_attendance,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(events, user_attendance, users,);

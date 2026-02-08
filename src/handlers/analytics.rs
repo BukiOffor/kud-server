@@ -18,7 +18,7 @@ pub fn analytics_routes(state: Arc<AppState>) -> Router {
             state.clone(),
             crate::auth::middleware::admin_authorize,
         )))
-         .route("/users-on-day/{date}", get(get_users_present_on_day))
+        .route("/users-on-day/{date}", get(get_users_present_on_day))
         .route("/user-attendance/{id}", get(get_user_attendance))
         .route("/upcoming-birthdays", get(get_upcoming_birthdays))
         .route("/event-report/{id}", get(get_event_stats_report))
@@ -103,5 +103,3 @@ pub async fn get_event_stats_report(
     let response = services::analytics::fetch_event_stats_report(&mut conn, id).await?;
     Ok(Json(response))
 }
-
-

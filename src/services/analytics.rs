@@ -44,10 +44,10 @@ pub async fn fetch_user_attendance(
 
     // 3. Calculate statistics
     // We define total days as unique dates in user_attendance table (global events)
-   let total_days: i64 = user_attendance::table
-    .select(count_distinct(user_attendance::date))
-    .get_result(conn)
-    .await?;
+    let total_days: i64 = user_attendance::table
+        .select(count_distinct(user_attendance::date))
+        .get_result(conn)
+        .await?;
 
     tracing::debug!("Total days: {}", total_days);
 

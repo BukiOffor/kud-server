@@ -1,7 +1,7 @@
+pub mod analytics;
 pub mod attendance;
 pub mod events;
 pub mod user;
-pub mod analytics;
 use super::{schema::*, *};
 //use diesel::sql_types::{Bool, Int8, Nullable, Text, Timestamp, Uuid as SqlUuid};
 

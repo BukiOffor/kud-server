@@ -41,8 +41,6 @@ pub struct User {
     pub phone: Option<String>,
 }
 
-
-
 impl User {
     pub fn set_reg_no(&mut self, code: i64) {
         self.reg_no = format!("{}/KUD/{:03}", self.year_joined, code);
@@ -74,4 +72,3 @@ impl ToSql<Text, diesel::pg::Pg> for Role {
         Ok(serialize::IsNull::No)
     }
 }
-

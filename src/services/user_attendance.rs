@@ -3,6 +3,8 @@ use crate::models::users::User;
 use crate::{dto::attendance::*, models::user_attendance::*};
 use chrono::{Datelike, TimeZone, Timelike};
 use chrono_tz::Africa::Lagos;
+use diesel::result::DatabaseErrorKind;
+use diesel::result::Error::DatabaseError;
 use uuid::Uuid;
 
 pub async fn admin_sign_attendance(
@@ -21,10 +23,38 @@ pub async fn admin_sign_attendance(
         .date_naive();
     let mut user_attendance = UserAttendance::new(worker_id, today);
     user_attendance.set_marked_by(admin_id);
-    diesel::insert_into(schema::user_attendance::table)
+    let response = diesel::insert_into(schema::user_attendance::table)
         .values(&user_attendance)
         .execute(&mut conn)
-        .await?;
+        .await;
+
+    match response {
+        Ok(_) => {}
+        Err(DatabaseError(kind, _)) => match kind {
+            DatabaseErrorKind::UniqueViolation => {
+                return Err(ModuleError::Error(
+                    "user already has attendance for today".into(),
+                ));
+            }
+            DatabaseErrorKind::ForeignKeyViolation => {
+                return Err(ModuleError::Error(
+                    "something went wrong, contact administartor".into(),
+                ));
+            }
+            _ => {
+                return Err(ModuleError::InternalError(
+                    "something went wrong, contact administartor".into(),
+                ));
+            }
+        },
+        Err(e) => {
+            tracing::error!("{}", e.to_string());
+            return Err(ModuleError::InternalError(
+                "something went wrong, contact administartor".into(),
+            ));
+        }
+    }
+
     Ok(Message::new("Attendance signed successfully", None))
 }
 
@@ -64,10 +94,36 @@ pub async fn sign_attendance(
         .date_naive();
 
     let user_attendance = UserAttendance::new(user_id, today);
-    diesel::insert_into(schema::user_attendance::table)
+    let response = diesel::insert_into(schema::user_attendance::table)
         .values(&user_attendance)
         .execute(&mut conn)
-        .await?;
+        .await;
+    match response {
+        Ok(_) => {}
+        Err(DatabaseError(kind, _)) => match kind {
+            DatabaseErrorKind::UniqueViolation => {
+                return Err(ModuleError::Error(
+                    "user already has attendance for today".into(),
+                ));
+            }
+            DatabaseErrorKind::ForeignKeyViolation => {
+                return Err(ModuleError::Error(
+                    "something went wrong, contact administartor".into(),
+                ));
+            }
+            _ => {
+                return Err(ModuleError::InternalError(
+                    "something went wrong, contact administartor".into(),
+                ));
+            }
+        },
+        Err(e) => {
+            tracing::error!("{}", e.to_string());
+            return Err(ModuleError::InternalError(
+                "something went wrong, contact administartor".into(),
+            ));
+        }
+    }
     Ok(Message::new(
         "Attendance signed successfully, Welcome to church",
         None,

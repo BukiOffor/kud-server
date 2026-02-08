@@ -38,11 +38,7 @@ pub async fn admin_sign_attendance(
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::user_attendance::admin_sign_attendance(
-        state.pool.clone(),
-        user_id,
-        id,
-    )
-    .await?;
+    let response =
+        services::user_attendance::admin_sign_attendance(state.pool.clone(), user_id, id).await?;
     Ok(Json(response))
 }

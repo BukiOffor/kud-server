@@ -98,6 +98,20 @@ pub struct UpdateUserRequest {
     pub country: Option<String>,
 }
 
+impl UpdateUserRequest {
+    pub fn is_empty(&self) -> bool {
+        self.first_name.is_none()
+            && self.last_name.is_none()
+            && self.dob.is_none()
+            && self.gender.is_none()
+            && self.phone.is_none()
+            && self.address.is_none()
+            && self.city.is_none()
+            && self.state.is_none()
+            && self.country.is_none()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserRoleRequest {
     pub role: Role,

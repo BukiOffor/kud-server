@@ -4,6 +4,7 @@ use axum::extract::Multipart;
 use chrono::Datelike;
 
 use super::*;
+use crate::models::activity_logs::{ActivityLog, ActivityType};
 use crate::{dto::user::*, models::users::*};
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error::DatabaseError;
@@ -65,8 +66,12 @@ pub async fn seed_default_admin(pool: Arc<Pool>) -> Result<(), ModuleError> {
     Ok(())
 }
 
-pub async fn register_user(pool: Arc<Pool>, payload: NewUser) -> Result<Message<()>, ModuleError> {
-    let mut conn = &mut pool
+pub async fn register_user(
+    pool: Arc<Pool>,
+    payload: NewUser,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool
         .get()
         .await
         .map_err(|_| ModuleError::InternalError(POOL_ERROR_MSG.into()))?;
@@ -84,6 +89,12 @@ pub async fn register_user(pool: Arc<Pool>, payload: NewUser) -> Result<Message<
         .values(&user)
         .execute(&mut conn)
         .await?;
+
+    let log = ActivityLog::new(ActivityType::UserCreated, performer_id)
+        .set_target_id(user.id)
+        .set_target_type("User".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
 
     Ok("User registered successfully".into())
 }
@@ -161,6 +172,7 @@ pub async fn update_user(
     pool: Arc<Pool>,
     payload: UpdateUserRequest,
     id: Uuid,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
@@ -188,7 +200,15 @@ pub async fn update_user(
         .await;
     match result {
         Ok(0) => Err(ModuleError::Error("User not found".into())),
-        Ok(_) => Ok("User updated successfully".into()),
+        Ok(_) => {
+            let log = ActivityLog::new(ActivityType::UserUpdated, performer_id)
+                .set_target_id(id)
+                .set_target_type("User".into())
+                .finish();
+            crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+            Ok("User updated successfully".into())
+        }
         Err(DatabaseError(DatabaseErrorKind::UniqueViolation, info)) => {
             return Err(ModuleError::Error(
                 format!(
@@ -202,7 +222,11 @@ pub async fn update_user(
     }
 }
 
-pub async fn delete_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, ModuleError> {
+pub async fn delete_user(
+    pool: Arc<Pool>,
+    id: Uuid,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
@@ -211,10 +235,20 @@ pub async fn delete_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, Modul
         .execute(&mut conn)
         .await?;
 
+    let log = ActivityLog::new(ActivityType::UserUpdated, performer_id) // Using UserUpdated for delete as well, or should I add UserDeleted?
+        .set_target_id(id)
+        .set_target_type("User".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok("User deleted successfully".into())
 }
 
-pub async fn deactivate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, ModuleError> {
+pub async fn deactivate_user(
+    pool: Arc<Pool>,
+    id: Uuid,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
@@ -225,10 +259,20 @@ pub async fn deactivate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, M
         .execute(&mut conn)
         .await?;
 
+    let log = ActivityLog::new(ActivityType::UserDeactivation, performer_id)
+        .set_target_id(id)
+        .set_target_type("User".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok("User deactivated successfully".into())
 }
 
-pub async fn activate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, ModuleError> {
+pub async fn activate_user(
+    pool: Arc<Pool>,
+    id: Uuid,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
         .await
@@ -239,6 +283,12 @@ pub async fn activate_user(pool: Arc<Pool>, id: Uuid) -> Result<Message<()>, Mod
         .execute(&mut conn)
         .await?;
 
+    let log = ActivityLog::new(ActivityType::UserActivation, performer_id)
+        .set_target_id(id)
+        .set_target_type("User".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok("User activated successfully".into())
 }
 
@@ -246,6 +296,7 @@ pub async fn update_user_role(
     pool: Arc<Pool>,
     id: Uuid,
     payload: UpdateUserRoleRequest,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
@@ -257,12 +308,19 @@ pub async fn update_user_role(
         .execute(&mut conn)
         .await?;
 
+    let log = ActivityLog::new(ActivityType::UserUpdated, performer_id)
+        .set_target_id(id)
+        .set_target_type("User".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok("User role updated successfully".into())
 }
 
 pub async fn import_users(
     pool: Arc<Pool>,
     mut multipart: Multipart,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
@@ -290,9 +348,7 @@ pub async fn import_users(
             let mut user: crate::dto::user::CsvUser =
                 result.map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
 
-            tracing::info!("User before validation: {:#?}", user);
             user.validate();
-            tracing::info!("User after validation: {:#?}", user);
             let new_user: User = user.to_new_user()?.try_into()?;
             temp_years.insert(new_user.year_joined.to_string());
             temp_users.push(new_user);
@@ -319,8 +375,6 @@ pub async fn import_users(
         total_imported += 1;
     }
 
-    tracing::info!("Imported {} users", total_imported);
-
     // Insert all users
     let tx: Result<(), ModuleError> = conn
         .build_transaction()
@@ -336,7 +390,14 @@ pub async fn import_users(
         .await;
 
     match tx {
-        Ok(_) => Ok("User registered successfully".into()),
+        Ok(_) => {
+            let log = ActivityLog::new(ActivityType::UserImported, performer_id)
+                .set_details(serde_json::json!({ "total_imported": total_imported }))
+                .finish();
+            crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+            Ok("User registered successfully".into())
+        }
         Err(e) => Err(e),
     }
 }
@@ -397,20 +458,34 @@ pub async fn export_users(
 pub async fn change_password(
     pool: Arc<Pool>,
     payload: ChangePasswordRequest,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
     let password_hash = crate::helpers::password_hasher(&payload.password)?;
-    diesel::update(schema::users::table)
-        .filter(schema::users::email.eq(payload.email))
+    let user_id = schema::users::table
+        .filter(schema::users::email.eq(&payload.email))
+        .select(schema::users::id)
+        .first::<Uuid>(&mut conn)
+        .await?;
+
+    diesel::update(schema::users::table.find(user_id))
         .set(schema::users::password_hash.eq(password_hash))
         .execute(&mut conn)
         .await?;
+
+    let log = ActivityLog::new(ActivityType::PasswordChanged, performer_id)
+        .set_target_id(user_id)
+        .set_target_type("User".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok("Password changed successfully".into())
 }
 
 pub async fn reset_user_device_id(
-    user_id: Uuid, 
+    user_id: Uuid,
     pool: Arc<Pool>,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool
         .get()
@@ -423,8 +498,15 @@ pub async fn reset_user_device_id(
         .await;
     match result {
         Ok(0) => Err(ModuleError::Error("User not found".into())),
-        Ok(_) => Ok("User device ID reset successfully".into()),
+        Ok(_) => {
+            let log = ActivityLog::new(ActivityType::DeviceReset, performer_id)
+                .set_target_id(user_id)
+                .set_target_type("User".into())
+                .finish();
+            crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+            Ok("User device ID reset successfully".into())
+        }
         Err(e) => Err(ModuleError::Error(e.to_string().into())),
     }
 }
-

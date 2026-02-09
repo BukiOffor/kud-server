@@ -34,10 +34,12 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
 }
 
 pub async fn register_user(
+    Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<NewUser>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::register_user(state.pool.clone(), payload).await?;
+    let response =
+        services::users::register_user(state.pool.clone(), payload, user_id).await?;
     Ok(Json(response))
 }
 
@@ -62,49 +64,71 @@ pub async fn update_user(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UpdateUserRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::update_user(state.pool.clone(), payload, user_id).await?;
+    let response =
+        services::users::update_user(state.pool.clone(), payload, user_id, user_id).await?;
     Ok(Json(response))
 }
 
 pub async fn delete_user(
-    Claims { .. }: Claims,
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::delete_user(state.pool.clone(), id).await?;
+    let response = services::users::delete_user(state.pool.clone(), id, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn deactivate_user(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::deactivate_user(state.pool.clone(), id).await?;
+    let response = services::users::deactivate_user(state.pool.clone(), id, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn activate_user(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::activate_user(state.pool.clone(), id).await?;
+    let response = services::users::activate_user(state.pool.clone(), id, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn update_user_role(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
     Json(payload): Json<UpdateUserRoleRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::update_user_role(state.pool.clone(), id, payload).await?;
+    let response =
+        services::users::update_user_role(state.pool.clone(), id, payload, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn import_users(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     multipart: Multipart,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::import_users(state.pool.clone(), multipart).await?;
+    let response =
+        services::users::import_users(state.pool.clone(), multipart, performer_id).await?;
     Ok(Json(response))
 }
 
@@ -116,17 +140,27 @@ pub async fn export_users(
 }
 
 pub async fn change_password(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::change_password(state.pool.clone(), payload).await?;
+    let response =
+        services::users::change_password(state.pool.clone(), payload, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn reset_user_device_id(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::users::reset_user_device_id(id, state.pool.clone()).await?;
+    let response =
+        services::users::reset_user_device_id(id, state.pool.clone(), performer_id).await?;
     Ok(Json(response))
 }

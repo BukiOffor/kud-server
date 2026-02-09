@@ -23,4 +23,6 @@ pub fn get_routes(state: Arc<AppState>) -> Router {
         .merge(user_attendance::routes(state.clone()))
         .merge(events::routes(state.clone()))
         .merge(analytics::routes(state.clone()))
+        .merge(logs::routes(state.clone()))
+        .merge(roster::routes(state.clone()))
 }

@@ -1,8 +1,15 @@
 use super::*;
+use crate::dto::user::UserDto;
 use crate::models::user_attendance::AttendanceType;
 use chrono::{NaiveDate, NaiveDateTime};
 
-#[derive(Selectable, Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AttendanceWithUser {
+    pub attendance: UserAttendanceDto,
+    pub user: UserDto,
+}
+
+#[derive(Selectable, Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(table_name = user_attendance)]
 pub struct UserAttendanceDto {
     pub id: uuid::Uuid,

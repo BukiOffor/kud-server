@@ -26,10 +26,11 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
 }
 
 pub async fn create_roster(
+    Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<NewRoster>,
 ) -> Result<Json<Message<Roster>>, ModuleError> {
-    let response = services::roster::create_roster(state.pool.clone(), payload).await?;
+    let response = services::roster::create_roster(state.pool.clone(), payload, user_id).await?;
     Ok(Json(Message::new(
         "Roster created successfully",
         Some(response),
@@ -45,11 +46,11 @@ pub async fn get_roster(
 }
 
 pub async fn update_roster(
-    // Claims { user_id, .. }: Claims,
+    Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UpdateRosterRequest>,
 ) -> Result<Json<Message<Roster>>, ModuleError> {
-    let response = services::roster::update_roster(state.pool.clone(), payload).await?;
+    let response = services::roster::update_roster(state.pool.clone(), payload, user_id).await?;
     Ok(Json(Message::new(
         "Roster updated successfully",
         Some(response),

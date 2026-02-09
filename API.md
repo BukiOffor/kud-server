@@ -29,6 +29,14 @@ Record user attendance for a specific event.
 - **Request Body:** `CheckIntoEventRequest`
 - **Response:** `Message`
 
+### Check In with Identifier
+Check into an event using email or Reg No (Admin only).
+
+- **Method:** `POST`
+- **Path:** `/events/attendance/check-in-identifier`
+- **Request Body:** `CheckInWithIdentifierRequest`
+- **Response:** `Message`
+
 ### Get Upcoming Events
 Retrieve a list of events scheduled for the future.
 
@@ -172,6 +180,15 @@ Change user password.
 - **Request Body:** `ChangePasswordRequest`
 - **Response:** `Message`
 
+### Reset Device ID
+Reset a user's device ID (Admin only).
+
+- **Method:** `PATCH`
+- **Path:** `/users/admin/reset-device-id/{id}`
+- **Parameters:**
+    - `id`: UUID
+- **Response:** `Message`
+
 ---
 
 ## Attendance (`/attendance`)
@@ -192,6 +209,63 @@ Admin signs attendance for a worker.
 - **Parameters:**
     - `id`: UUID (Worker ID)
 - **Response:** `Message`
+
+---
+
+## Logs (`/logs`) (Admin Only)
+
+### Get All Logs
+Retrieve a paginated list of activity logs.
+
+- **Method:** `GET`
+- **Path:** `/logs`
+- **Query Parameters:** `Pagination`
+- **Response:** `PaginatedResult<ActivityLogResponse>`
+
+### Get User Activity
+Retrieve activity logs for a specific user.
+
+- **Method:** `GET`
+- **Path:** `/logs/user/{id}`
+- **Parameters:**
+    - `id`: UUID
+- **Response:** `Array<ActivityLog>`
+
+---
+
+## Roster (`/roster`) (Admin Only)
+
+### Create Roster
+Create a new roster.
+
+- **Method:** `POST`
+- **Path:** `/roster/create`
+- **Request Body:** `NewRoster`
+- **Response:** `Message<Roster>`
+
+### Get Roster
+Retrieve a single roster.
+
+- **Method:** `GET`
+- **Path:** `/roster/{id}`
+- **Parameters:**
+    - `id`: UUID
+- **Response:** `Roster`
+
+### Update Roster
+Update an existing roster.
+
+- **Method:** `PATCH`
+- **Path:** `/roster/update`
+- **Request Body:** `UpdateRosterRequest`
+- **Response:** `Message<Roster>`
+
+### Get All Rosters
+Retrieve all rosters.
+
+- **Method:** `GET`
+- **Path:** `/roster/all`
+- **Response:** `Array<Roster>`
 
 ---
 
@@ -248,7 +322,17 @@ type Role = "Admin" | "User" | "Technical";
 
 #### AttendanceType
 ```typescript
-type AttendanceType = "Remote" | "Onsite" | "Mandatory" | "Optional" | "Standard" | "Late" | "Excused";
+#### ActivityType
+```typescript
+type ActivityType = 
+    | "UserLogin" | "UserLogout" | "UserCreated" | "UserUpdated" 
+    | "UserActivation" | "UserDeactivation" | "UserMarkedAttendance" 
+    | "AdminMarkedAttendanceForUser" | "UserImported" | "PasswordChanged" 
+    | "DeviceReset" | "EventCreated" | "EventUpdated" | "EventDeleted" 
+    | "EventCheckIn" | "RosterCreated" | "RosterUpdated" | "RosterDeleted";
+```
+
+#### AttendanceType
 ```
 
 #### Location `(Enum)`
@@ -301,6 +385,16 @@ interface CheckIntoEventRequest {
   attendance_type: string;
   location?: GeoPoint;
 }
+
+#### CheckInWithIdentifierRequest
+```typescript
+interface CheckInWithIdentifierRequest {
+  event_id: string; // UUID
+  identifier: string; // Email or Reg No
+  attendance_type: string;
+  location?: GeoPoint;
+}
+```
 ```
 
 #### SignAttendanceRequest
@@ -360,6 +454,47 @@ interface ChangePasswordRequest {
   email: string;
   password: string;
 }
+
+#### NewRoster
+```typescript
+interface NewRoster {
+  name: string;
+  is_active: boolean;
+  start_date: string; // "YYYY-MM-DD"
+  end_date: string; // "YYYY-MM-DD"
+  num_for_hall_one: number;
+  num_for_main_hall: number;
+  num_for_gallery: number;
+  num_for_basement: number;
+  num_for_outside: number;
+  year: string;
+}
+```
+
+#### UpdateRosterRequest
+```typescript
+interface UpdateRosterRequest {
+  id: string; // UUID
+  name?: string;
+  is_active?: boolean;
+  start_date?: string;
+  end_date?: string;
+  num_for_hall_one?: number;
+  num_for_main_hall?: number;
+  num_for_gallery?: number;
+  num_for_basement?: number;
+  num_for_outside?: number;
+  year?: string;
+}
+```
+
+#### Pagination
+```typescript
+interface Pagination {
+  page?: number; // default: 1
+  size?: number; // default: 10
+}
+```
 ```
 
 ### Responses
@@ -467,4 +602,68 @@ interface UserAttendanceHistory {
   history: Array<UserAttendanceDto>;
   summary: AttendanceSummary;
 }
+
+#### Roster
+```typescript
+interface Roster {
+  id: string; // UUID
+  name: string;
+  is_active: boolean;
+  start_date: string; // "YYYY-MM-DD"
+  end_date: string; // "YYYY-MM-DD"
+  num_for_hall_one: number;
+  num_for_main_hall: number;
+  num_for_gallery: number;
+  num_for_basement: number;
+  num_for_outside: number;
+  year: string;
+  created_at: string;
+}
+```
+
+#### ActivityLog
+```typescript
+interface ActivityLog {
+  id: string; // UUID
+  user_id: string; // UUID
+  activity_type: ActivityType;
+  target_id?: string; // UUID
+  target_type?: string;
+  details: any;
+  created_at: string;
+}
+```
+
+#### ActivityLogResponse
+```typescript
+interface ActivityLogResponse {
+  id: string; // UUID
+  user_id: string; // UUID
+  user_name: string;
+  user_email?: string;
+  user_role: string;
+  first_name?: string;
+  last_name?: string;
+  activity_type: string;
+  created_at: string;
+}
+```
+
+#### PaginatedResult<T>
+```typescript
+interface PaginatedResult<T> {
+  items: Array<T>;
+  metadata: Metadata;
+}
+```
+
+#### Metadata
+```typescript
+interface Metadata {
+  page: number;
+  size: number;
+  total_items: number;
+  num_pages: number;
+}
+```
 ```

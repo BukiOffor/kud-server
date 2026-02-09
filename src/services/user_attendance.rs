@@ -1,7 +1,10 @@
 use super::*;
+use crate::dto::attendance::{AttendanceWithUser, UserAttendanceDto};
+use crate::dto::user::UserDto;
+use crate::models::activity_logs::{ActivityLog, ActivityType};
 use crate::models::users::User;
 use crate::{dto::attendance::*, models::user_attendance::*};
-use chrono::{Datelike, TimeZone, Timelike};
+use chrono::{Datelike, NaiveDate, TimeZone, Timelike};
 use chrono_tz::Africa::Lagos;
 use diesel::result::DatabaseErrorKind;
 use diesel::result::Error::DatabaseError;
@@ -29,7 +32,13 @@ pub async fn admin_sign_attendance(
         .await;
 
     match response {
-        Ok(_) => {}
+        Ok(_) => {
+            let log = ActivityLog::new(ActivityType::AdminMarkedAttendanceForUser, admin_id)
+                .set_target_id(worker_id)
+                .set_target_type("User".into())
+                .finish();
+            crate::services::activity_logs::emit_log(log, &mut conn).await?;
+        }
         Err(DatabaseError(kind, _)) => match kind {
             DatabaseErrorKind::UniqueViolation => {
                 return Err(ModuleError::Error(
@@ -99,7 +108,13 @@ pub async fn sign_attendance(
         .execute(&mut conn)
         .await;
     match response {
-        Ok(_) => {}
+        Ok(_) => {
+            let log = ActivityLog::new(ActivityType::UserMarkedAttendance, user_id)
+                .set_target_id(user_id)
+                .set_target_type("User".into())
+                .finish();
+            crate::services::activity_logs::emit_log(log, &mut conn).await?;
+        }
         Err(DatabaseError(kind, _)) => match kind {
             DatabaseErrorKind::UniqueViolation => {
                 return Err(ModuleError::Error(
@@ -223,4 +238,54 @@ fn is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
         }
         _ => false,
     }
+}
+pub async fn get_attendance_on_day(
+    pool: Arc<Pool>,
+    date_str: String,
+) -> Result<Message<Vec<AttendanceWithUser>>, ModuleError> {
+    let mut conn = pool.get().await?;
+    let date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
+        .map_err(|_| ModuleError::Error("Invalid date format, use YYYY-MM-DD".into()))?;
+
+    let attendance_records = schema::user_attendance::table
+        .inner_join(schema::users::table)
+        .filter(schema::user_attendance::date.eq(date))
+        .order_by(schema::user_attendance::created_at.desc())
+        .select((UserAttendanceDto::as_select(), UserDto::as_select()))
+        .load::<(UserAttendanceDto, UserDto)>(&mut conn)
+        .await?;
+
+    let response = attendance_records
+        .into_iter()
+        .map(|(attendance, user)| AttendanceWithUser { attendance, user })
+        .collect::<Vec<_>>();
+
+    Ok(Message::new("Attendance found", Some(response)))
+}
+
+pub async fn revoke_attendance(
+    pool: Arc<Pool>,
+    id: Uuid,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    let attendance_record: UserAttendance = schema::user_attendance::table
+        .find(id)
+        .first(&mut conn)
+        .await
+        .map_err(|_| ModuleError::Error("Attendance record not found".into()))?;
+
+    diesel::delete(schema::user_attendance::table.find(id))
+        .execute(&mut conn)
+        .await?;
+
+    let log = ActivityLog::new(ActivityType::AttendanceRevoked, performer_id)
+        .set_target_id(attendance_record.user_id)
+        .set_target_type("User".into())
+        .set_details(serde_json::json!({ "attendance_id": id, "date": attendance_record.date }))
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+    Ok(Message::new("Attendance revoked successfully", None))
 }

@@ -1,5 +1,6 @@
 use super::*;
 use crate::dto::events::{CheckIntoEventRequest, CreateEventRequest, UpdateEventRequest};
+use crate::models::activity_logs::{ActivityLog, ActivityType};
 use crate::models::events::Location;
 use crate::models::{events::Event, user_attendance::UserAttendance};
 use crate::services::user_attendance::is_within_radius;
@@ -31,12 +32,19 @@ pub async fn create_event(
         .execute(&mut conn)
         .await?;
 
+    let log = ActivityLog::new(ActivityType::EventCreated, user_id)
+        .set_target_id(event.id)
+        .set_target_type("Event".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok(event)
 }
 
 pub async fn update_event(
     pool: Arc<Pool>,
     payload: UpdateEventRequest,
+    performer_id: Uuid,
 ) -> Result<Event, ModuleError> {
     let mut conn = pool.get().await?;
 
@@ -66,10 +74,20 @@ pub async fn update_event(
         .get_result::<Event>(&mut conn)
         .await?;
 
+    let log = ActivityLog::new(ActivityType::EventUpdated, performer_id)
+        .set_target_id(event.id)
+        .set_target_type("Event".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok(event)
 }
 
-pub async fn delete_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Message<()>, ModuleError> {
+pub async fn delete_event(
+    pool: Arc<Pool>,
+    event_id: Uuid,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
     let count = diesel::delete(schema::events::table)
@@ -81,6 +99,12 @@ pub async fn delete_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Message<()>
         return Err(ModuleError::Error("Event not found".into()));
     }
 
+    let log = ActivityLog::new(ActivityType::EventDeleted, performer_id)
+        .set_target_id(event_id)
+        .set_target_type("Event".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
     Ok(Message::new("Event deleted successfully", None))
 }
 
@@ -88,6 +112,7 @@ pub async fn check_into_event(
     pool: Arc<Pool>,
     payload: CheckIntoEventRequest,
     requester_role: crate::models::users::Role,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
@@ -162,6 +187,19 @@ pub async fn check_into_event(
         .execute(&mut conn)
         .await?;
 
+    if is_admin {
+        let log = ActivityLog::new(ActivityType::EventCheckIn, performer_id)
+            .set_target_id(payload.event_id)
+            .set_details(serde_json::json!({ "user_id": payload.user_id }))
+            .finish();
+        crate::services::activity_logs::emit_log(log, &mut conn).await?;
+    } else {
+        let log = ActivityLog::new(ActivityType::EventCheckIn, payload.user_id)
+            .set_target_id(payload.event_id)
+            .finish();
+        crate::services::activity_logs::emit_log(log, &mut conn).await?;
+    }
+
     Ok(Message::new("Checked in successfully", None))
 }
 
@@ -169,6 +207,7 @@ pub async fn check_in_with_identifier(
     pool: Arc<Pool>,
     payload: crate::dto::events::CheckInWithIdentifierRequest,
     requester_role: crate::models::users::Role,
+    performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
     let mut conn = pool.get().await?;
 
@@ -190,7 +229,7 @@ pub async fn check_in_with_identifier(
         location: payload.location,
     };
 
-    check_into_event(pool.clone(), check_in_payload, requester_role).await
+    check_into_event(pool.clone(), check_in_payload, requester_role, performer_id).await
 }
 
 pub async fn get_event(pool: Arc<Pool>, event_id: Uuid) -> Result<Event, ModuleError> {

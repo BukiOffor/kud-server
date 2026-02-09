@@ -36,29 +36,44 @@ pub fn event_routes(state: Arc<AppState>) -> Router {
 }
 
 pub async fn update_event(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UpdateEventRequest>,
 ) -> Result<Json<Event>, ModuleError> {
-    let response = services::events::update_event(state.pool.clone(), payload).await?;
+    let response =
+        services::events::update_event(state.pool.clone(), payload, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn check_into_event(
-    Claims { role, .. }: Claims,
+    Claims {
+        user_id: performer_id,
+        role,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CheckIntoEventRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::events::check_into_event(state.pool.clone(), payload, role).await?;
+    let response =
+        services::events::check_into_event(state.pool.clone(), payload, role, performer_id).await?;
     Ok(Json(response))
 }
 
 pub async fn check_into_event_with_identifier(
-    Claims { role, .. }: Claims,
+    Claims {
+        user_id: performer_id,
+        role,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<crate::dto::events::CheckInWithIdentifierRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
     let response =
-        services::events::check_in_with_identifier(state.pool.clone(), payload, role).await?;
+        services::events::check_in_with_identifier(state.pool.clone(), payload, role, performer_id)
+            .await?;
     Ok(Json(response))
 }
 
@@ -72,10 +87,15 @@ pub async fn create_event(
 }
 
 pub async fn delete_event(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
     State(state): State<Arc<AppState>>,
     Path(event_id): Path<Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::events::delete_event(state.pool.clone(), event_id).await?;
+    let response =
+        services::events::delete_event(state.pool.clone(), event_id, performer_id).await?;
     Ok(Json(response))
 }
 

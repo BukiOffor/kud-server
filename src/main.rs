@@ -28,13 +28,9 @@ async fn main() {
         tracing::error!("Failed to seed default admin: {}", e.to_string());
     }
 
-    let config = Arc::new(server::config::Config::init().unwrap_or_else(|e| {
-        tracing::error!(e = %e, "Failed to load configuration");
-        std::process::exit(1);
-    }));
+
     let state: Arc<AppState> = AppState {
         pool: pool.clone(),
-        config,
     }
     .into();
 

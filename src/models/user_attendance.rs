@@ -18,14 +18,14 @@ pub struct UserAttendance {
     pub id: Uuid,
     pub user_id: Uuid,
     pub date: NaiveDate,
-    pub week_day: String,
     pub time_in: NaiveDateTime,
     pub time_out: Option<NaiveDateTime>,
-    pub event_id: Option<Uuid>,
     pub marked_by: Option<Uuid>,
+    pub event_id: Option<Uuid>,
     pub attendance_type: AttendanceType,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+    pub week_day: String,
 }
 
 #[derive(

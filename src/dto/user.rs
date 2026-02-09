@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use super::*;
 use crate::models::users::*;
 
-#[derive(Selectable, Serialize, Deserialize, Queryable, Clone)]
+#[derive(Selectable, Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(table_name = users)]
 pub struct UserDto {
     pub id: uuid::Uuid,

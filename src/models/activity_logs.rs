@@ -1,4 +1,3 @@
-
 use chrono::NaiveDateTime;
 use diesel::{
     deserialize::{self, FromSql, FromSqlRow},
@@ -23,7 +22,18 @@ pub enum ActivityType {
     UserActivation,
     UserDeactivation,
     UserMarkedAttendance,
-
+    AdminMarkedAttendanceForUser,
+    UserImported,
+    PasswordChanged,
+    DeviceReset,
+    EventCreated,
+    EventUpdated,
+    EventDeleted,
+    EventCheckIn,
+    RosterCreated,
+    RosterUpdated,
+    RosterDeleted,
+    AttendanceRevoked,
 }
 
 impl ActivityType {
@@ -36,7 +46,18 @@ impl ActivityType {
             ActivityType::UserActivation => "Activated a user account.".into(),
             ActivityType::UserDeactivation => "Deactivated a user account.".into(),
             ActivityType::UserMarkedAttendance => "Marked a user's attendance.".into(),
-
+            ActivityType::AdminMarkedAttendanceForUser => "Marked a user's attendance.".into(),
+            ActivityType::UserImported => "Imported users from CSV.".into(),
+            ActivityType::PasswordChanged => "Changed user password.".into(),
+            ActivityType::DeviceReset => "Changed user device ID.".into(),
+            ActivityType::EventCreated => "Created a new event.".into(),
+            ActivityType::EventUpdated => "Updated an event.".into(),
+            ActivityType::EventDeleted => "Deleted an event.".into(),
+            ActivityType::EventCheckIn => "Checked into an event.".into(),
+            ActivityType::RosterCreated => "Created a new roster.".into(),
+            ActivityType::RosterUpdated => "Updated a roster.".into(),
+            ActivityType::RosterDeleted => "Deleted a roster.".into(),
+            ActivityType::AttendanceRevoked => "Revoked a user's attendance.".into(),
         }
     }
 }

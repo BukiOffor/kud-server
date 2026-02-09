@@ -5,6 +5,7 @@ use diesel_async::RunQueryDsl;
 
 use super::jwt::*;
 use super::*;
+use crate::models::activity_logs::{ActivityLog, ActivityType};
 
 pub async fn login(
     jar: CookieJar,
@@ -48,6 +49,12 @@ pub async fn login(
             .set(schema::users::last_seen.eq(chrono::Utc::now().naive_utc()))
             .execute(&mut conn)
             .await?;
+
+        let log = ActivityLog::new(ActivityType::UserLogin, user.id)
+            .set_target_id(user.id)
+            .set_target_type("User".into())
+            .finish();
+        crate::services::activity_logs::emit_log(log, &mut conn).await?;
 
         Ok((updated_jar, user))
     } else {

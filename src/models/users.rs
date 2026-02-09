@@ -1,3 +1,5 @@
+use crate::models::roster::{Hall};
+
 use super::*;
 
 #[derive(
@@ -27,7 +29,7 @@ pub struct User {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub year_joined: String,
-    pub current_roster_hall: Option<String>,
+    pub current_roster_hall: Option<Hall>,
     pub current_roster_allocation: Option<String>,
     pub role: Role,
     pub last_seen: Option<NaiveDateTime>,
@@ -39,6 +41,7 @@ pub struct User {
     pub state: Option<String>,
     pub country: Option<String>,
     pub phone: Option<String>,
+    pub hall_derivation: i32,
 }
 
 impl User {

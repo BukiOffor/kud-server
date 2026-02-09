@@ -3,6 +3,8 @@ pub mod auth;
 pub mod events;
 pub mod user_attendance;
 pub mod users;
+pub mod roster;
+pub mod logs;
 pub use super::*;
 
 use crate::auth::jwt::Claims;

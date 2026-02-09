@@ -75,6 +75,7 @@ impl TryFrom<NewUser> for User {
             city: None,
             state: None,
             country: None,
+            hall_derivation: 0,
         })
     }
 }

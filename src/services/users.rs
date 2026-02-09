@@ -53,6 +53,7 @@ pub async fn seed_default_admin(pool: Arc<Pool>) -> Result<(), ModuleError> {
         state: None,
         country: None,
         phone: None,
+        hall_derivation: 0,
     };
 
     diesel::insert_into(schema::users::table)
@@ -406,3 +407,24 @@ pub async fn change_password(
         .await?;
     Ok("Password changed successfully".into())
 }
+
+pub async fn reset_user_device_id(
+    user_id: Uuid, 
+    pool: Arc<Pool>,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool
+        .get()
+        .await
+        .map_err(|_| ModuleError::InternalError(POOL_ERROR_MSG.into()))?;
+    let result = diesel::update(schema::users::table)
+        .filter(schema::users::id.eq(user_id))
+        .set(schema::users::device_id.eq(Option::<String>::None))
+        .execute(&mut conn)
+        .await;
+    match result {
+        Ok(0) => Err(ModuleError::Error("User not found".into())),
+        Ok(_) => Ok("User device ID reset successfully".into()),
+        Err(e) => Err(ModuleError::Error(e.to_string().into())),
+    }
+}
+

@@ -15,6 +15,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/admin/deactivate/{id}", patch(deactivate_user))
         .route("/admin/activate/{id}", patch(activate_user))
         .route("/admin/update-role/{id}", patch(update_user_role))
+        .route("/admin/reset-device-id/{id}", patch(reset_user_device_id))
         .route("/admin/register", post(register_user))
         .route("/admin/import", post(import_users))
         .route("/admin/export", get(export_users))
@@ -119,5 +120,13 @@ pub async fn change_password(
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<Message<()>>, ModuleError> {
     let response = services::users::change_password(state.pool.clone(), payload).await?;
+    Ok(Json(response))
+}
+
+pub async fn reset_user_device_id(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::users::reset_user_device_id(id, state.pool.clone()).await?;
     Ok(Json(response))
 }

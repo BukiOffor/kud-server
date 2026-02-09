@@ -1,7 +1,7 @@
 pub mod count_logs;
 pub mod counter;
 pub mod events;
-pub mod logs;
+pub mod activity_logs;
 pub mod roster;
 pub mod suggestion_comments;
 pub mod suggestions;

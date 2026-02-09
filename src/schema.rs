@@ -58,10 +58,47 @@ diesel::table! {
         state -> Nullable<Text>,
         country -> Nullable<Text>,
         phone -> Nullable<Text>,
+        hall_derivation -> Int4,
+    }
+}
+
+diesel::table! {
+    rosters (id) {
+        id -> Uuid,
+        name -> Text,
+        is_active -> Bool,
+        start_date -> Date,
+        num_for_hall_one -> Int4,
+        num_for_main_hall -> Int4,
+        num_for_gallery -> Int4,
+        num_for_basement -> Int4,
+        num_for_outside -> Int4,
+        end_date -> Date,
+        year -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    activity_logs (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        activity_type -> Text,
+        target_id -> Nullable<Uuid>,
+        target_type -> Nullable<Text>,
+        details -> Json,
+        created_at -> Timestamp,
     }
 }
 
 diesel::joinable!(events -> users (created_by));
 diesel::joinable!(user_attendance -> events (event_id));
+diesel::joinable!(activity_logs -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(events, user_attendance, users,);
+diesel::allow_tables_to_appear_in_same_query!(
+    events,
+    user_attendance,
+    users,
+    rosters,
+    activity_logs,
+);

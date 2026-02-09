@@ -11,7 +11,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .pretty()
         .with_level(true)
-        .with_env_filter("debug,tokio_postgres::query=off,tokio_postgres::prepare=off")
+        .with_env_filter("info,tokio_postgres::query=off,tokio_postgres::prepare=off")
         .init();
 
     let pool: Arc<
@@ -28,11 +28,7 @@ async fn main() {
         tracing::error!("Failed to seed default admin: {}", e.to_string());
     }
 
-
-    let state: Arc<AppState> = AppState {
-        pool: pool.clone(),
-    }
-    .into();
+    let state: Arc<AppState> = AppState { pool: pool.clone() }.into();
 
     server::CHIDA_LOCATION
         .set(server::dto::attendance::GeoPoint {

@@ -1,9 +1,9 @@
+pub mod activity_logs;
 pub mod analytics;
 pub mod events;
+pub mod roster;
 pub mod user_attendance;
 pub mod users;
-pub mod roster;
-pub mod activity_logs;
 
 use super::*;
 use diesel::prelude::*;

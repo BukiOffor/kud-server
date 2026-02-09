@@ -73,37 +73,140 @@ Retrieves all logs associated with a specific user.
 
 ## 📋 Roster Management
 
-### Create New Roster
-Creates a new roster for church hall allocations.
 
-- **Method:** `POST`
-- **Path:** `/api/v1/roster/create`
-- **Permissions:** Admin Only
-- **Request Body:** `NewRoster`
-- **Response:** `Message<Roster>`
-
-### Update Existing Roster
-Updates details of an existing roster. Supports partial updates.
+### Activate Roster
+Activates a roster and automatically allocates users to halls based on their past allocations and current capacity.
 
 - **Method:** `PATCH`
-- **Path:** `/api/v1/roster/update`
+- **Path:** `/api/v1/roster/activate/{id}`
 - **Permissions:** Admin Only
-- **Request Body:** `UpdateRosterRequest`
-- **Response:** `Message<Roster>`
+- **Parameters:**
+  - `id` (Path): UUID of the roster to activate.
+- **Response:** `Message<()>`
 
-### Get Roster by ID
-- **Method:** `GET`
+### Delete Roster
+Deletes a roster and its associated hall allocations.
+
+- **Method:** `DELETE`
 - **Path:** `/api/v1/roster/{id}`
-- **Response:** `Roster`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): UUID of the roster to delete.
+- **Response:** `Message<()>`
 
-### Get All Rosters
+### View Roster Assignments
+Retrieves all users assigned to a specific roster along with their hall allocations.
+
 - **Method:** `GET`
-- **Path:** `/api/v1/roster/all`
-- **Response:** `Array<Roster>`
+- **Path:** `/api/v1/roster/{id}/assignments`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): UUID of the roster.
+- **Response:** `Array<RosterAssignmentDto>`
+
+### Export Roster (CSV)
+Generates and downloads a CSV file containing all user assignments for a specific roster.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/roster/export/{id}`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): UUID of the roster to export.
+- **Response:** `File (text/csv)`
+  - **Filename:** `roster_{roster_name}.csv`
+
+### Export Roster by Hall (CSV)
+Generates and downloads a CSV file for a specific hall within a roster.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/roster/export/{id}/hall`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): UUID of the roster.
+- **Query Parameters:**
+  - `hall`: `Hall` (MainHall, HallOne, Gallery, Basement, Outside)
+- **Response:** `File (text/csv)`
 
 ---
 
-## 👥 Attendance Tracking
+## � Analytics & Reports
+
+### Get Total Users List
+Retrieves a complete list of users for analytics purposes.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/analytics/total-users`
+- **Permissions:** Admin Only
+- **Response:** `Message<Array<UserDto>>`
+
+### Get Users Present on Day
+Calculates stats and fetches users present on a specific date.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/analytics/users-on-day`
+- **Permissions:** Admin Only
+- **Query Parameters:**
+  - `date`: string (YYYY-MM-DD)
+- **Response:** `Message<UserPresentStats>`
+
+### Get Overall Attendance Rates
+Retrieves attendance percentage stats aggregated by user role.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/analytics/attendance-rates`
+- **Permissions:** Admin Only
+- **Response:** `Message<AttendanceStats>`
+
+### Get User Attendance History
+Retrieves detailed attendance history and summary for a specific user.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/analytics/user-attendance/{id}`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): User UUID.
+- **Response:** `Message<UserAttendanceHistory>`
+
+### Upcoming Birthdays
+Retrieves a list of users with birthdays in the next 30 days.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/analytics/upcoming-birthdays`
+- **Permissions:** Admin Only
+- **Response:** `Message<Array<UserDto>>`
+
+### Event Stats Report
+Retrieves detailed statistics and attendance breakdown for a specific event.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/analytics/event-report/{id}`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): Event UUID.
+- **Response:** `Message<EventStatsReport>`
+
+---
+
+## �👥 Attendance Tracking
+
+### Check-in Attendance
+Allows a user to mark their own attendance for an ongoing event.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/attendance/check-in`
+- **Permissions:** Authenticated User
+- **Request Body:** `SignAttendanceRequest`
+- **Response:** `Message<()>`
+
+### Admin Sign Attendance
+Allows an administrator to mark attendance for a specific user.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/attendance/admin/sign/{id}`
+- **Permissions:** Admin Only
+- **Parameters:**
+  - `id` (Path): The UUID of the user to mark attendance for.
+- **Response:** `Message<()>`
 
 ### Get Attendance for a Specific Day
 Retrieves all attendance records for a given date, including detailed user information for each record.
@@ -209,6 +312,18 @@ interface UpdateRosterRequest {
   num_for_outside?: number;
   year?: string;
 }
+
+#### RosterAssignmentDto
+```typescript
+interface RosterAssignmentDto {
+  id: string; // UUID of the assignment record
+  user_id: string; // UUID of the user
+  first_name: string;
+  last_name: string;
+  reg_no: string;
+  hall: "MainHall" | "HallOne" | "Gallery" | "Basement" | "Outside";
+}
+```
 ```
 
 ### Activity Logs
@@ -238,6 +353,57 @@ interface ActivityLogResponse {
   activity_type: string;
   created_at: string;
 }
+
+### Analytics
+#### UserPresentStats
+```typescript
+interface UserPresentStats {
+  absentees: UserDto[];
+  date: string; // "YYYY-MM-DD"
+  presentees: UserDto[];
+}
+```
+
+#### AttendanceStats
+```typescript
+interface AttendanceStats {
+  admin_rate: number;
+  user_rate: number;
+  technical_rate: number;
+  total_users: number;
+  active_users: number;
+  suspended_users: number;
+}
+```
+
+#### UserAttendanceHistory
+```typescript
+interface UserAttendanceHistory {
+  user: UserDto;
+  history: UserAttendanceDto[];
+  summary: {
+    total_days: number;
+    days_present: number;
+    rate: number;
+  };
+}
+```
+
+#### EventStatsReport
+```typescript
+interface EventStatsReport {
+  total_attendees: number;
+  eligible_attendees_count: number;
+  attendees: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    time_in: string; // ISO 8601 or HH:mm
+  }[];
+  absentees: UserDto[];
+}
+```
 ```
 
 #### ActivityType (Enum)

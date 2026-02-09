@@ -38,8 +38,7 @@ pub async fn register_user(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<NewUser>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response =
-        services::users::register_user(state.pool.clone(), payload, user_id).await?;
+    let response = services::users::register_user(state.pool.clone(), payload, user_id).await?;
     Ok(Json(response))
 }
 

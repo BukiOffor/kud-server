@@ -1,4 +1,4 @@
-use crate::models::roster::{Hall};
+use crate::models::roster::Hall;
 
 use super::*;
 

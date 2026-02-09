@@ -33,6 +33,7 @@ pub enum ActivityType {
     RosterCreated,
     RosterUpdated,
     RosterDeleted,
+    RosterActivated,
     AttendanceRevoked,
 }
 
@@ -57,6 +58,7 @@ impl ActivityType {
             ActivityType::RosterCreated => "Created a new roster.".into(),
             ActivityType::RosterUpdated => "Updated a roster.".into(),
             ActivityType::RosterDeleted => "Deleted a roster.".into(),
+            ActivityType::RosterActivated => "Activated a roster.".into(),
             ActivityType::AttendanceRevoked => "Revoked a user's attendance.".into(),
         }
     }

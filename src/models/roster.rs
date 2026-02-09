@@ -53,46 +53,35 @@ impl ToSql<Text, diesel::pg::Pg> for Hall {
     }
 }
 
-pub struct HallDerivation {
-    pub main_hall: i32,
-    pub gallery: i32,
-    pub hall_one: i32,
-    pub basement: i32,
-    pub outside: i32,
-}
-
-impl HallDerivation {
-    pub fn new() -> Self {
-        Self {
-            main_hall: 10,
-            gallery: 8,
-            hall_one: 6,
-            basement: 4,
-            outside: 2,
-        }
+impl Hall {
+    // Get all possible halls
+    pub fn all() -> Vec<Hall> {
+        vec![
+            Hall::MainHall,
+            Hall::HallOne,
+            Hall::Gallery,
+            Hall::Basement,
+            Hall::Outside,
+        ]
     }
 
-    pub fn get_derivation(&self, hall: Hall) -> i32 {
-        match hall {
-            Hall::MainHall => self.main_hall,
-            Hall::Gallery => self.gallery,
-            Hall::HallOne => self.hall_one,
-            Hall::Basement => self.basement,
-            Hall::Outside => self.outside,
-        }
+    fn get_available_halls(served_halls: &[Hall], available: Vec<Hall>) -> Vec<Hall> {
+       available
+            .into_iter()
+            .filter(|hall| !served_halls.contains(hall))
+            .collect()
     }
 
-    pub fn get_hall(&self, derivation: i32) -> Hall {
-        match derivation {
-            10 => Hall::MainHall,
-            8 => Hall::Gallery,
-            6 => Hall::HallOne,
-            4 => Hall::Basement,
-            2 => Hall::Outside,
-            _ => panic!("Invalid derivation"),
+    /// Assign a random hall from available ones
+    pub fn assign_hall(served_halls: &[Hall], available: Vec<Hall>) -> Option<Hall> {
+        use rand::prelude::IndexedRandom;
+        let available = Self::get_available_halls(served_halls, available);
+        if available.is_empty() {
+            None // All halls have been served
+        } else {
+            #[allow(deprecated)]
+            let mut rng = rand::thread_rng();
+            available.choose(&mut rng).cloned()
         }
-    }
-    pub fn get_sum_of_derivation(&self) -> i32 {
-        self.main_hall + self.gallery + self.hall_one + self.basement + self.outside
     }
 }

@@ -1,4 +1,4 @@
-use crate::models::roster::Roster;
+use crate::models::roster::{Hall, Roster};
 
 use super::*;
 use chrono::NaiveDate;
@@ -6,7 +6,6 @@ use chrono::NaiveDate;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewRoster {
     pub name: String,
-    pub is_active: bool,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub num_for_hall_one: i32,
@@ -21,7 +20,7 @@ impl From<NewRoster> for Roster {
         Self {
             id: Uuid::now_v7(),
             name: roster.name,
-            is_active: roster.is_active,
+            is_active: false,
             num_for_hall_one: roster.num_for_hall_one,
             num_for_main_hall: roster.num_for_main_hall,
             num_for_gallery: roster.num_for_gallery,
@@ -66,4 +65,14 @@ pub struct UpdateRosterRequest {
     pub num_for_basement: Option<i32>,
     pub num_for_outside: Option<i32>,
     pub year: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable)]
+pub struct RosterAssignmentDto {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
+    pub reg_no: String,
+    pub hall: Hall,
 }

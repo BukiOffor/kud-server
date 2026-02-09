@@ -91,10 +91,23 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    users_rosters (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        roster_id -> Uuid,
+        hall -> Text,
+        year -> Text,
+        created_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(activity_logs -> users (user_id));
 diesel::joinable!(events -> users (created_by));
 diesel::joinable!(user_attendance -> events (event_id));
 diesel::joinable!(user_attendance -> users (user_id));
+diesel::joinable!(users_rosters -> rosters (roster_id));
+diesel::joinable!(users_rosters -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     activity_logs,
@@ -102,4 +115,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     rosters,
     user_attendance,
     users,
+    users_rosters,
 );

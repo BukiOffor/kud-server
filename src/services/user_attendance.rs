@@ -86,7 +86,7 @@ pub async fn sign_attendance(
     };
     if let Some(device_id) = user.device_id {
         if device_id != payload.device_id {
-            return Err(ModuleError::Error("Device ID does not match".into()));
+            return Err(ModuleError::Error("device id does not match".into()));
         }
     } else {
         diesel::update(schema::users::table)
@@ -171,26 +171,26 @@ pub fn is_valid_attempt(
             }
             Ok(())
         }
-        chrono::Weekday::Tue => {
-            // Wednesday: 16:30 → 18:00
-            let minutes_since_midnight = hour * 60 + minute;
-            let start = 18 * 60 + 30; // 6:30 PM
-            let end = 24 * 60; // 8:00 PM
-            let is_meeting_time = minutes_since_midnight >= start && minutes_since_midnight <= end;
-            if !is_meeting_time {
-                return Err(ModuleError::Error("Attendance window is closed".into()));
-            }
-            let church_location = crate::HOME_LOCATION_CHECKIN_RADIUS
-                .get()
-                .ok_or(ModuleError::Error("Church location not set".into()))?;
-            if !is_within_radius(payload.location, church_location.clone(), 100.0) {
-                tracing::warn!("User is not within radius");
-                return Err(ModuleError::Error(
-                    "User is not within checkin radius".into(),
-                ));
-            }
-            Ok(())
-        }
+        // chrono::Weekday::Tue => {
+        //     // Wednesday: 16:30 → 18:00
+        //     let minutes_since_midnight = hour * 60 + minute;
+        //     let start = 21 * 60 + 30; // 6:30 PM
+        //     let end = 23 * 60; // 8:00 PM
+        //     let is_meeting_time = minutes_since_midnight >= start && minutes_since_midnight <= end;
+        //     if !is_meeting_time {
+        //         return Err(ModuleError::Error("Attendance window is closed".into()));
+        //     }
+        //     let church_location = crate::HOME_LOCATION_CHECKIN_RADIUS
+        //         .get()
+        //         .ok_or(ModuleError::Error("Church location not set".into()))?;
+        //     if !is_within_radius(payload.location, church_location.clone(), 100.0) {
+        //         tracing::warn!("User is not within radius");
+        //         return Err(ModuleError::Error(
+        //             "User is not within checkin radius".into(),
+        //         ));
+        //     }
+        //     Ok(())
+        // }
         chrono::Weekday::Wed => {
             // Wednesday: 16:30 → 18:00
             let minutes_since_midnight = hour * 60 + minute;
@@ -203,7 +203,7 @@ pub fn is_valid_attempt(
             let church_location = crate::DOA_LOCATION
                 .get()
                 .ok_or(ModuleError::Error("Church location not set".into()))?;
-            if !is_within_radius(payload.location, church_location.clone(), 150.0) {
+            if !is_within_radius(payload.location, church_location.clone(), 100.0) {
                 tracing::warn!("User is not within radius");
                 return Err(ModuleError::Error(
                     "User is not within checkin radius".into(),

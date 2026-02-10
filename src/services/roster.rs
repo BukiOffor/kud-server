@@ -86,12 +86,25 @@ pub async fn activate_roster(
                     .first::<Roster>(conn)
                     .await?;
 
+                if roster.is_active {
+                    return Err(ModuleError::Error("Roster is already active".into()));
+                }
+
+                if roster.end_date < chrono::Utc::now().date_naive() {
+                    return Err(ModuleError::Error("Roster end date is in the past".into()));
+                }
+
+                if chrono::Utc::now().date_naive() > roster.start_date {
+                    return Err(ModuleError::Error("Roster start date is in the future".into()));
+                }
+
+
                 let mut user_roster = Vec::new();
                 let mut available_halls: Vec<Hall> = Hall::all();
                 //let mut exhausted_halls: HashSet<Hall> = HashSet::new();
 
                 for user in users {
-                    let past_halls = crate::schema::users_rosters::table
+                    let past_halls: Vec<Hall> = crate::schema::users_rosters::table
                         .filter(crate::schema::users_rosters::user_id.eq(user))
                         .limit(5)
                         .filter(crate::schema::users_rosters::year.eq(&roster.year))
@@ -184,6 +197,13 @@ pub async fn activate_roster(
                     .execute(conn)
                     .await?;
 
+                // update all users in the roster to have the new roster id
+                for u_r in user_roster {
+                    diesel::update(crate::schema::users::table.find(u_r.user_id))
+                        .set(crate::schema::users::current_roster_hall.eq(u_r.hall))
+                        .execute(conn)
+                        .await?;
+                }
                 Ok::<(), ModuleError>(())
             })
         })

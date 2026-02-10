@@ -67,7 +67,8 @@ pub async fn update_user(
         services::users::update_user(state.pool.clone(), payload, user_id, user_id).await?;
     Ok(Json(response))
 }
-
+#[allow(dead_code, unused)]
+#[deprecated]
 pub async fn delete_user(
     Claims {
         user_id: performer_id,
@@ -76,6 +77,7 @@ pub async fn delete_user(
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
+    return Err(ModuleError::BadRequest("This endpoint has been deprecated, please use deacyivate user".into()));
     let response = services::users::delete_user(state.pool.clone(), id, performer_id).await?;
     Ok(Json(response))
 }

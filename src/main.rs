@@ -38,7 +38,7 @@ async fn main() {
         .unwrap();
     server::DOA_LOCATION
         .set(server::dto::attendance::GeoPoint {
-            lat: 9.076560214946829,
+            lat: 9.076381,
             lng: 7.431590122491971,
         })
         .unwrap();

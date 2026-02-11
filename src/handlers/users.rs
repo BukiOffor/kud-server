@@ -19,6 +19,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/admin/register", post(register_user))
         .route("/admin/import", post(import_users))
         .route("/admin/export", get(export_users))
+        .route("/admin/update/{id}", patch(admin_update_user))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
@@ -163,5 +164,19 @@ pub async fn reset_user_device_id(
 ) -> Result<Json<Message<()>>, ModuleError> {
     let response =
         services::users::reset_user_device_id(id, state.pool.clone(), performer_id).await?;
+    Ok(Json(response))
+}
+
+pub async fn admin_update_user(
+    Claims {
+        user_id: performer_id,
+        ..
+    }: Claims,
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<uuid::Uuid>,
+    Json(payload): Json<AdminUpdateUserRequest>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response =
+        services::users::admin_update_user(state.pool.clone(), payload, id, performer_id).await?;
     Ok(Json(response))
 }

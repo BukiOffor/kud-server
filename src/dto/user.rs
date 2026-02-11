@@ -187,3 +187,18 @@ impl CsvUser {
         })
     }
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminUpdateUserRequest {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub dob: Option<NaiveDateTime>,
+    pub gender: Option<String>,
+    pub phone: Option<String>,
+    pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
+    pub role: Option<Role>,
+}

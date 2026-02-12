@@ -183,7 +183,7 @@ pub fn is_valid_attempt(
             let church_location = crate::DOA_LOCATION
                 .get()
                 .ok_or(ModuleError::Error("Church location not set".into()))?;
-            if !is_within_radius(payload.location, church_location.clone(), 100.0) {
+            if !is_within_radius(payload.location, church_location.clone(), 250.0) {
                 tracing::warn!("User is not within radius");
                 return Err(ModuleError::Error(
                     "User is not within checkin radius".into(),

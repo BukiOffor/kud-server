@@ -187,3 +187,32 @@ impl CsvUser {
         })
     }
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminUpdateUserRequest {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub dob: Option<NaiveDateTime>,
+    pub gender: Option<String>,
+    pub phone: Option<String>,
+    pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
+    pub role: Option<Role>,
+}
+
+impl AdminUpdateUserRequest {
+    pub fn is_empty(&self) -> bool {
+        self.first_name.is_none()
+            && self.last_name.is_none()
+            && self.dob.is_none()
+            && self.gender.is_none()
+            && self.phone.is_none()
+            && self.address.is_none()
+            && self.city.is_none()
+            && self.state.is_none()
+            && self.country.is_none()
+    }
+}

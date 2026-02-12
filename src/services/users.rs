@@ -222,6 +222,63 @@ pub async fn update_user(
     }
 }
 
+
+pub async fn admin_update_user(
+    pool: Arc<Pool>,
+    payload: AdminUpdateUserRequest,
+    id: Uuid,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool
+        .get()
+        .await
+        .map_err(|_| ModuleError::InternalError(POOL_ERROR_MSG.into()))?;
+    if payload.is_empty() {
+        return Err(ModuleError::BadRequest("No fields to update".into()));
+    }
+
+    let target = schema::users::table.filter(schema::users::id.eq(id));
+
+    let result = diesel::update(target)
+        .set((
+            payload.first_name.map(|v| schema::users::first_name.eq(v)),
+            payload.last_name.map(|v| schema::users::last_name.eq(v)),
+            payload.dob.map(|v| schema::users::dob.eq(v)),
+            payload.gender.map(|v| schema::users::gender.eq(v)),
+            payload.phone.map(|v| schema::users::phone.eq(v)),
+            payload.address.map(|v| schema::users::address.eq(v)),
+            payload.city.map(|v| schema::users::city.eq(v)),
+            payload.state.map(|v| schema::users::state.eq(v)),
+            payload.country.map(|v| schema::users::country.eq(v)),
+            payload.role.map(|v| schema::users::role.eq(v)),
+        ))
+        .execute(&mut conn)
+        .await;
+    match result {
+        Ok(0) => Err(ModuleError::Error("User not found".into())),
+        Ok(_) => {
+            let log = ActivityLog::new(ActivityType::UserUpdated, performer_id)
+                .set_target_id(id)
+                .set_target_type("User".into())
+                .finish();
+            crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+            Ok("User updated successfully".into())
+        }
+        Err(DatabaseError(DatabaseErrorKind::UniqueViolation, info)) => {
+            return Err(ModuleError::Error(
+                format!(
+                    "Duplicate value for {}",
+                    info.constraint_name().unwrap_or("field")
+                )
+                .into(),
+            ));
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+
 pub async fn delete_user(
     pool: Arc<Pool>,
     id: Uuid,

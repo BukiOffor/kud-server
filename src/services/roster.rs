@@ -555,6 +555,7 @@ pub async fn import_roster(
                 }
                 diesel::insert_into(crate::schema::users_rosters::table)
                     .values(&user_roster)
+                    .on_conflict_do_nothing()
                     .execute(conn)
                     .await?;
 

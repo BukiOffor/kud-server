@@ -202,6 +202,8 @@ pub struct AdminUpdateUserRequest {
     pub country: Option<String>,
     pub email: Option<String>,
     pub role: Option<Role>,
+    pub year_joined: Option<String>,
+    pub password: Option<String>,
 }
 
 impl AdminUpdateUserRequest {

@@ -225,7 +225,7 @@ pub async fn update_user(
 
 pub async fn admin_update_user(
     pool: Arc<Pool>,
-    payload: AdminUpdateUserRequest,
+    mut payload: AdminUpdateUserRequest,
     id: Uuid,
     performer_id: Uuid,
 ) -> Result<Message<()>, ModuleError> {
@@ -238,6 +238,11 @@ pub async fn admin_update_user(
     }
 
     let target = schema::users::table.filter(schema::users::id.eq(id));
+
+    if let Some(password) = payload.password.take() {
+        let hashed_password = helpers::password_hasher(&password)?;
+        payload.password = Some(hashed_password);
+    }
 
     let result = diesel::update(target)
         .set((
@@ -252,6 +257,8 @@ pub async fn admin_update_user(
             payload.country.map(|v| schema::users::country.eq(v)),
             payload.role.map(|v| schema::users::role.eq(v)),
             payload.email.map(|v| schema::users::email.eq(v)),
+            payload.year_joined.map(|v| schema::users::year_joined.eq(v)),
+            payload.password.map(|v| schema::users::password_hash.eq(v)),
         ))
         .execute(&mut conn)
         .await;

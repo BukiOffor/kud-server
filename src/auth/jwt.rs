@@ -43,12 +43,12 @@ pub struct Claims {
 
 pub fn create_session_token(id: Uuid, role: Role) -> Result<AuthBodyDto, ModuleError> {
     let expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::hours(1))
+        .checked_add_signed(chrono::Duration::hours(10))
         .expect("valid timestamp")
         .timestamp() as usize;
 
     let refresh_expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::hours(2))
+        .checked_add_signed(chrono::Duration::hours(12))
         .expect("valid timestamp")
         .timestamp() as usize;
 

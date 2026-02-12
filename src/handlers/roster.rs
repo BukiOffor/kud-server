@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use axum::extract::Multipart;
+
 use super::*;
 use crate::dto::roster::*;
 use crate::models::roster::{Hall, Roster};
@@ -21,6 +23,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/{id}/assignments", get(view_roster_assignments))
         .route("/export/{id}", get(export_roster))
         .route("/export/{id}/hall", get(export_roster_by_hall))
+        .route("/import/{id}", post(import_roster))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
@@ -116,4 +119,14 @@ pub async fn export_roster_by_hall(
     let response =
         services::roster::export_roster_by_hall(id, state.pool.clone(), hall.clone()).await?;
     Ok(response)
+}
+
+pub async fn import_roster(
+    Claims { user_id, .. }: Claims,
+    State(state): State<Arc<AppState>>,
+    Path(roster_id): Path<uuid::Uuid>,
+    multipart: Multipart,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::roster::import_roster(state.pool.clone(), roster_id, multipart, user_id).await?;
+    Ok(Json(Message::new("Roster uploaded successfully", Some(response))))
 }

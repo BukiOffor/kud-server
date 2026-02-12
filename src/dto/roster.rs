@@ -76,3 +76,11 @@ pub struct RosterAssignmentDto {
     pub reg_no: String,
     pub hall: Hall,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CsvUserRoster {
+    pub first_name: String,
+    pub last_name: String,
+    pub hall: Option<Hall>,
+}

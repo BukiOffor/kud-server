@@ -103,7 +103,7 @@ impl IntoResponse for ModuleError {
                 let message = ErrorMessage::default().build(self.to_string(), 403);
                 (axum::http::StatusCode::FORBIDDEN, axum::Json(message)).into_response()
             }
-            Self::WrongCredentials => {
+            Self::WrongCredentials | Self::CouldNotExtractToken(_) => {
                 let message = ErrorMessage::default().build(self.to_string(), 401);
                 (axum::http::StatusCode::UNAUTHORIZED, axum::Json(message)).into_response()
             }
@@ -115,8 +115,7 @@ impl IntoResponse for ModuleError {
                 )
                     .into_response()
             }
-            Self::CouldNotExtractToken(_)
-            | Self::ItemNotFound
+            Self::ItemNotFound
             | Self::Error(_)
             | Self::BadRequest(_) => {
                 let message = ErrorMessage::default().build(self.to_string(), 400);

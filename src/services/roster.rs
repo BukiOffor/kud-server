@@ -3,7 +3,9 @@ use super::*;
 use crate::dto::roster::*;
 use crate::models::activity_logs::{ActivityLog, ActivityType};
 use crate::models::roster::*;
+use crate::models::users::User;
 use crate::models::users_roster::UsersRoster;
+use axum::extract::Multipart;
 use rand::seq::IndexedRandom;
 
 pub async fn create_roster(
@@ -19,7 +21,6 @@ pub async fn create_roster(
         .get_result(&mut conn)
         .await
         .map_err(Into::<ModuleError>::into)?;
-
     let log = ActivityLog::new(ActivityType::RosterCreated, performer_id)
         .set_target_id(roster.id)
         .set_target_type("Roster".into())
@@ -95,9 +96,10 @@ pub async fn activate_roster(
                 }
 
                 if chrono::Utc::now().date_naive() > roster.start_date {
-                    return Err(ModuleError::Error("Roster start date is in the future".into()));
+                    return Err(ModuleError::Error(
+                        "Roster start date is in the future".into(),
+                    ));
                 }
-
 
                 let mut user_roster = Vec::new();
                 let mut available_halls: Vec<Hall> = Hall::all();
@@ -111,10 +113,6 @@ pub async fn activate_roster(
                         .select(crate::schema::users_rosters::hall)
                         .load::<Hall>(conn)
                         .await?;
-
-                    // let past_halls = past_halls.into_iter()
-                    //     .filter(|hall| !exhausted_halls.contains(hall))
-                    //     .collect::<Vec<Hall>>();
 
                     // Assign a random hall from available ones
                     let mut assigned_hall = Hall::assign_hall(&past_halls, available_halls.clone());
@@ -464,10 +462,10 @@ async fn export_roster_data_filtered(
 }
 
 pub async fn view_roster_assignments(
-    conn_pool: Arc<Pool>,
+    pool: Arc<Pool>,
     roster_id: Uuid,
 ) -> Result<Vec<RosterAssignmentDto>, ModuleError> {
-    let mut conn = conn_pool.get().await?;
+    let mut conn = pool.get().await?;
     let assignments = crate::schema::users_rosters::table
         .filter(crate::schema::users_rosters::roster_id.eq(roster_id))
         .inner_join(crate::schema::users::table)
@@ -483,4 +481,96 @@ pub async fn view_roster_assignments(
         .await?;
 
     Ok(assignments)
+}
+
+pub async fn import_roster(
+    pool: Arc<Pool>,
+    roster_id: Uuid,
+    mut multipart: Multipart,
+    performer_id: Uuid,
+) -> Result<(), ModuleError> {
+    let mut conn = pool.get().await?;
+
+    conn.build_transaction()
+        .run(|conn| {
+            Box::pin(async move {
+                let roster: Roster = crate::schema::rosters::table
+                    .find(roster_id)
+                    .first::<Roster>(conn)
+                    .await
+                    .map_err(|_| ModuleError::ResourceNotFound("Roster not found".into()))?;
+
+                let mut user_roster = Vec::new();
+                while let Some(field) = multipart
+                    .next_field()
+                    .await
+                    .map_err(|e| ModuleError::InternalError(e.to_string().into()))?
+                {
+                    let data = field
+                        .bytes()
+                        .await
+                        .map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
+                    let body = String::from_utf8(data.to_vec())
+                        .map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
+                    let mut rdr = csv::Reader::from_reader(body.as_bytes());
+
+                    for result in rdr.deserialize() {
+                        let csv_user: CsvUserRoster =
+                            result.map_err(|e| ModuleError::InternalError(e.to_string().into()))?;
+
+                        let user = crate::schema::users::table
+                            .filter(crate::schema::users::first_name.eq(&csv_user.first_name))
+                            .filter(crate::schema::users::last_name.eq(&csv_user.last_name))
+                            .select(User::as_select())
+                            .first::<User>(conn)
+                            .await
+                            .optional()?;
+
+                        if let Some(user) = user {
+                            match csv_user.hall {
+                                Some(hall) => {
+                                    let new_assignment = UsersRoster::new(
+                                        user.id,
+                                        roster_id,
+                                        hall,
+                                        roster.year.clone(),
+                                    );
+                                    user_roster.push(new_assignment);
+                                }
+                                None => {
+                                    continue;
+                                }
+                            }
+                        } else {
+                            tracing::warn!(
+                                "User not found for roster assignment: {} {}",
+                                csv_user.first_name,
+                                csv_user.last_name
+                            );
+                        }
+                    }
+                }
+                diesel::insert_into(crate::schema::users_rosters::table)
+                    .values(&user_roster)
+                    .execute(conn)
+                    .await?;
+
+                for u_r in user_roster {
+                    diesel::update(crate::schema::users::table.find(u_r.user_id))
+                        .set(crate::schema::users::current_roster_hall.eq(u_r.hall))
+                        .execute(conn)
+                        .await?;
+                }
+                Ok::<(), ModuleError>(())
+            })
+        })
+        .await?;
+
+    let log = ActivityLog::new(ActivityType::RosterActivated, performer_id)
+        .set_target_id(roster_id)
+        .set_target_type("Roster".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+    Ok(())
 }

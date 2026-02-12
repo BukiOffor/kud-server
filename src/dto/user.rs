@@ -200,6 +200,7 @@ pub struct AdminUpdateUserRequest {
     pub city: Option<String>,
     pub state: Option<String>,
     pub country: Option<String>,
+    pub email: Option<String>,
     pub role: Option<Role>,
 }
 
@@ -214,5 +215,7 @@ impl AdminUpdateUserRequest {
             && self.city.is_none()
             && self.state.is_none()
             && self.country.is_none()
+            && self.email.is_none()
+            && self.role.is_none()
     }
 }

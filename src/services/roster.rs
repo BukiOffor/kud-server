@@ -550,6 +550,9 @@ pub async fn import_roster(
                         }
                     }
                 }
+                if user_roster.is_empty() {
+                    return Err(ModuleError::BadRequest("could not match any user in the uploaded roster".into()));
+                }
                 diesel::insert_into(crate::schema::users_rosters::table)
                     .values(&user_roster)
                     .execute(conn)

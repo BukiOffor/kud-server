@@ -251,6 +251,7 @@ pub async fn admin_update_user(
             payload.state.map(|v| schema::users::state.eq(v)),
             payload.country.map(|v| schema::users::country.eq(v)),
             payload.role.map(|v| schema::users::role.eq(v)),
+            payload.email.map(|v| schema::users::email.eq(v)),
         ))
         .execute(&mut conn)
         .await;

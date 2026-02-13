@@ -12,7 +12,9 @@ use serde_json::Value;
 use std::io::Write;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq, utoipa::ToSchema,
+)]
 #[diesel(sql_type = diesel::sql_types::Text)]
 pub enum ActivityType {
     UserLogin,
@@ -82,7 +84,17 @@ impl ToSql<Text, diesel::pg::Pg> for ActivityType {
         Ok(serialize::IsNull::No)
     }
 }
-#[derive(Debug, Clone, Queryable, Identifiable, Serialize, Deserialize, Insertable, Selectable)]
+#[derive(
+    Debug,
+    Clone,
+    Queryable,
+    Identifiable,
+    Serialize,
+    Deserialize,
+    Insertable,
+    Selectable,
+    utoipa::ToSchema,
+)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = crate::schema::activity_logs)]
 pub struct ActivityLog {
@@ -130,7 +142,7 @@ impl ActivityLog {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ActivityLogResponse {
     pub id: Uuid,
     pub user_id: Uuid,

@@ -1,6 +1,9 @@
 use super::*;
+use crate::auth::middleware as auth_middleware;
 use crate::dto::user::*;
+use crate::dto::*;
 use axum::extract::Multipart;
+use axum::middleware as axum_middleware;
 
 pub fn routes(state: Arc<AppState>) -> Router {
     let routes = user_routes(state.clone());
@@ -20,20 +23,37 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/admin/import", post(import_users))
         .route("/admin/export", get(export_users))
         .route("/admin/update/{id}", patch(admin_update_user))
-        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
-            state.clone(),
-            crate::auth::middleware::admin_authorize,
-        )))
+        .layer(
+            ServiceBuilder::new().layer(axum_middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware::admin_authorize,
+            )),
+        )
         .route("/get/{id}", get(get_user))
         .route("/update", patch(update_user))
         .route("/change-password", patch(change_password))
-        .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
-            state.clone(),
-            crate::auth::middleware::authorize,
-        )))
+        .layer(
+            ServiceBuilder::new().layer(axum_middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware::authorize,
+            )),
+        )
         .with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/users/admin/register",
+    request_body = NewUser,
+    responses(
+        (status = 200, description = "User registered successfully", body = MessageEmpty),
+        (status = 400, description = "Bad request"),
+        (status = 401, description = "Unauthorized")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn register_user(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -43,6 +63,20 @@ pub async fn register_user(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/get/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "User details", body = UserDto),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_user(
     Path(id): Path<uuid::Uuid>,
     State(state): State<Arc<AppState>>,
@@ -51,6 +85,19 @@ pub async fn get_user(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/admin/get_all",
+    params(
+        UserFilter
+    ),
+    responses(
+        (status = 200, description = "List of users", body = [UserDto])
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_all_users(
     State(state): State<Arc<AppState>>,
     Query(payload): Query<UserFilter>,
@@ -59,6 +106,18 @@ pub async fn get_all_users(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/update",
+    request_body = UpdateUserRequest,
+    responses(
+        (status = 200, description = "User updated successfully", body = MessageEmpty),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn update_user(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -78,11 +137,27 @@ pub async fn delete_user(
     State(state): State<Arc<AppState>>,
     Path(id): Path<uuid::Uuid>,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    return Err(ModuleError::BadRequest("This endpoint has been deprecated, please use deacyivate user".into()));
+    return Err(ModuleError::BadRequest(
+        "This endpoint has been deprecated, please use deacyivate user".into(),
+    ));
     let response = services::users::delete_user(state.pool.clone(), id, performer_id).await?;
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/admin/deactivate/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "User deactivated successfully", body = MessageEmpty),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn deactivate_user(
     Claims {
         user_id: performer_id,
@@ -95,6 +170,20 @@ pub async fn deactivate_user(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/admin/activate/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "User activated successfully", body = MessageEmpty),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn activate_user(
     Claims {
         user_id: performer_id,
@@ -107,6 +196,21 @@ pub async fn activate_user(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/admin/update-role/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    request_body = UpdateUserRoleRequest,
+    responses(
+        (status = 200, description = "User role updated successfully", body = MessageEmpty),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn update_user_role(
     Claims {
         user_id: performer_id,
@@ -141,6 +245,18 @@ pub async fn export_users(
     Ok((headers, file_data))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/change-password",
+    request_body = ChangePasswordRequest,
+    responses(
+        (status = 200, description = "Password changed successfully", body = MessageEmpty),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn change_password(
     Claims {
         user_id: performer_id,
@@ -154,6 +270,20 @@ pub async fn change_password(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/admin/reset-device-id/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "Device ID reset successfully", body = MessageEmpty),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn reset_user_device_id(
     Claims {
         user_id: performer_id,
@@ -167,6 +297,21 @@ pub async fn reset_user_device_id(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/admin/update/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    request_body = AdminUpdateUserRequest,
+    responses(
+        (status = 200, description = "User updated successfully", body = MessageEmpty),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn admin_update_user(
     Claims {
         user_id: performer_id,

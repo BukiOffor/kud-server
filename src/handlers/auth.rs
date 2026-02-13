@@ -13,6 +13,15 @@ pub fn auth_routes(state: Arc<AppState>) -> Router {
     Router::new().route("/login", post(auth)).with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login",
+    request_body = LoginPayload,
+    responses(
+        (status = 200, description = "Login successful", body = UserDto),
+        (status = 401, description = "Unauthorized")
+    )
+)]
 pub async fn auth(
     jar: CookieJar,
     State(state): State<Arc<AppState>>,

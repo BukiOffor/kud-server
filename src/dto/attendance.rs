@@ -3,13 +3,13 @@ use crate::dto::user::UserDto;
 use crate::models::user_attendance::AttendanceType;
 use chrono::{NaiveDate, NaiveDateTime};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 pub struct AttendanceWithUser {
     pub attendance: UserAttendanceDto,
     pub user: UserDto,
 }
 
-#[derive(Selectable, Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Selectable, Serialize, Deserialize, Queryable, Clone, Debug, utoipa::ToSchema)]
 #[diesel(table_name = user_attendance)]
 pub struct UserAttendanceDto {
     pub id: uuid::Uuid,
@@ -25,7 +25,7 @@ pub struct UserAttendanceDto {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct GeoPoint {
     pub lat: f64,
     pub lng: f64,
@@ -43,13 +43,13 @@ impl GeoPoint {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SignAttendanceRequest {
     pub location: GeoPoint,
     pub device_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AdminSignAttendanceRequest {
     pub attendance_type: AttendanceType,
 }

@@ -1,6 +1,8 @@
+use axum::Router;
 use axum::http::{Method, header::*};
 use diesel_migrations::{EmbeddedMigrations, embed_migrations};
-use server::{AppState, handlers};
+use server::{AppState, handlers, swagger};
+
 use std::sync::Arc;
 
 use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
@@ -80,10 +82,13 @@ async fn main() {
                 .unwrap(),
         ]);
     server::info!("Starting Web Server ............");
-    let app = handlers::get_routes(state)
+    let app = Router::new()
+        .merge(handlers::get_routes(state.clone()))
+        .merge(swagger::swagger_routes())
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .layer(cors);
+
     let api = axum::Router::new().nest("/api/v1", app);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:9898").await.unwrap();

@@ -3,7 +3,7 @@ use crate::models::roster::{Hall, Roster};
 use super::*;
 use chrono::NaiveDate;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct NewRoster {
     pub name: String,
     pub start_date: NaiveDate,
@@ -34,7 +34,7 @@ impl From<NewRoster> for Roster {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Selectable, Queryable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Selectable, Queryable, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::rosters)]
 pub struct RosterDto {
     pub id: Uuid,
@@ -51,7 +51,7 @@ pub struct RosterDto {
     pub created_at: chrono::NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, AsChangeset)]
+#[derive(Debug, Clone, Serialize, Deserialize, AsChangeset, utoipa::ToSchema)]
 #[diesel(table_name = crate::schema::rosters)]
 pub struct UpdateRosterRequest {
     pub id: Uuid,
@@ -67,7 +67,7 @@ pub struct UpdateRosterRequest {
     pub year: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, utoipa::ToSchema)]
 pub struct RosterAssignmentDto {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -77,10 +77,15 @@ pub struct RosterAssignmentDto {
     pub hall: Hall,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CsvUserRoster {
     pub first_name: String,
     pub last_name: String,
     pub hall: Option<Hall>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct UpdateUserHallRequest {
+    pub user_id: Uuid,
+    pub user_roster_id: Uuid,
+    pub hall: Hall,
 }

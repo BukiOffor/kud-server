@@ -9,6 +9,7 @@ pub mod mailer;
 pub mod models;
 pub mod schema;
 pub mod services;
+pub mod swagger;
 
 use crate::dto::attendance::GeoPoint;
 

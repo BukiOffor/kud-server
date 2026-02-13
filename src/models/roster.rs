@@ -11,6 +11,7 @@ use super::*;
     AsChangeset,
     Insertable,
     QueryableByName,
+    utoipa::ToSchema,
 )]
 #[diesel(table_name = crate::schema::rosters)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -29,7 +30,18 @@ pub struct Roster {
     pub created_at: chrono::NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq, Hash)]
+#[derive(
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    AsExpression,
+    FromSqlRow,
+    PartialEq,
+    Eq,
+    Hash,
+    utoipa::ToSchema,
+)]
 #[diesel(sql_type = Text)]
 pub enum Hall {
     MainHall,
@@ -66,7 +78,7 @@ impl Hall {
     }
 
     fn get_available_halls(served_halls: &[Hall], available: Vec<Hall>) -> Vec<Hall> {
-       available
+        available
             .into_iter()
             .filter(|hall| !served_halls.contains(hall))
             .collect()

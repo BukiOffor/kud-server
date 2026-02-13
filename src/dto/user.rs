@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use super::*;
 use crate::models::users::*;
 
-#[derive(Selectable, Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Selectable, Serialize, Deserialize, Queryable, Clone, Debug, utoipa::ToSchema)]
 #[diesel(table_name = users)]
 pub struct UserDto {
     pub id: uuid::Uuid,
@@ -32,7 +32,7 @@ pub struct UserDto {
     pub is_active: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct NewUser {
     pub first_name: String,
     pub last_name: String,
@@ -80,13 +80,13 @@ impl TryFrom<NewUser> for User {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UserRequest {
     pub id: Option<uuid::Uuid>,
     pub identifier: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateUserRequest {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -113,19 +113,19 @@ impl UpdateUserRequest {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateUserRoleRequest {
     pub role: Role,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct UserFilter {
     pub page: Option<i64>,
     pub limit: Option<i64>,
     pub search: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema)]
 pub struct ChangePasswordRequest {
     pub email: String,
     pub password: String,
@@ -188,8 +188,7 @@ impl CsvUser {
     }
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AdminUpdateUserRequest {
     pub first_name: Option<String>,
     pub last_name: Option<String>,

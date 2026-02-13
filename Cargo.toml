@@ -40,3 +40,5 @@ lettre = { version = "0.10.4", features = ["tokio1", "tokio1-native-tls"] }
 handlebars = "6.3.2"
 csv = "1.4.0"
 chrono-tz = "0.8"
+utoipa = { version = "5.4.0", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }

@@ -1,4 +1,5 @@
 use crate::dto::attendance::{AttendanceWithUser, SignAttendanceRequest};
+use crate::dto::*;
 
 use super::*;
 
@@ -25,6 +26,18 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/attendance/check-in",
+    request_body = SignAttendanceRequest,
+    responses(
+        (status = 200, description = "Attendance signed successfully", body = MessageEmpty),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn sign_attendance(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -35,6 +48,20 @@ pub async fn sign_attendance(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/attendance/admin/sign/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "Attendance signed by admin successfully", body = MessageEmpty),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn admin_sign_attendance(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -45,6 +72,19 @@ pub async fn admin_sign_attendance(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/attendance/on-day/{date}",
+    params(
+        ("date" = String, Path, description = "Date in YYYY-MM-DD format")
+    ),
+    responses(
+        (status = 200, description = "Attendance list for the day", body = MessageAttendanceVec)
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_attendance_on_day(
     State(state): State<Arc<AppState>>,
     Path(date): Path<String>,
@@ -54,6 +94,20 @@ pub async fn get_attendance_on_day(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/attendance/admin/revoke/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Attendance ID")
+    ),
+    responses(
+        (status = 200, description = "Attendance revoked successfully", body = MessageEmpty),
+        (status = 404, description = "Attendance not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn revoke_attendance(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,

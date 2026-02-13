@@ -4,6 +4,7 @@ use axum::extract::Multipart;
 
 use super::*;
 use crate::dto::roster::*;
+use crate::dto::*;
 use crate::models::roster::{Hall, Roster};
 
 pub fn routes(state: Arc<AppState>) -> Router {
@@ -24,6 +25,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/export/{id}", get(export_roster))
         .route("/export/{id}/hall", get(export_roster_by_hall))
         .route("/import/{id}", post(import_roster))
+        .route("/hall", patch(update_user_hall))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
@@ -35,6 +37,18 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/roster/create",
+    request_body = NewRoster,
+    responses(
+        (status = 200, description = "Roster created successfully", body = MessageRosterDto),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn create_roster(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -47,6 +61,20 @@ pub async fn create_roster(
     )))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/roster/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster details", body = Roster),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_roster(
     Path(id): Path<uuid::Uuid>,
     State(state): State<Arc<AppState>>,
@@ -55,6 +83,18 @@ pub async fn get_roster(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/roster/update",
+    request_body = UpdateRosterRequest,
+    responses(
+        (status = 200, description = "Roster updated successfully", body = MessageRosterDto),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn update_roster(
     Claims { user_id, .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -67,6 +107,16 @@ pub async fn update_roster(
     )))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/roster/all",
+    responses(
+        (status = 200, description = "List of all rosters", body = [Roster])
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_all_rosters(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Roster>>, ModuleError> {
@@ -74,6 +124,20 @@ pub async fn get_all_rosters(
     Ok(Json(response))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/roster/activate/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster activated successfully", body = MessageEmpty),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn activate_roster(
     Path(id): Path<uuid::Uuid>,
     Claims { user_id, .. }: Claims,
@@ -83,6 +147,20 @@ pub async fn activate_roster(
     Ok(Json(Message::new("Roster activated successfully", None)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/roster/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster deleted successfully", body = MessageEmpty),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn delete_roster(
     Path(id): Path<uuid::Uuid>,
     Claims { user_id, .. }: Claims,
@@ -92,6 +170,19 @@ pub async fn delete_roster(
     Ok(Json(Message::new("Roster deleted successfully", None)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/roster/{id}/assignments",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster assignments list", body = [RosterAssignmentDto])
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn view_roster_assignments(
     Path(id): Path<uuid::Uuid>,
     State(state): State<Arc<AppState>>,
@@ -127,6 +218,38 @@ pub async fn import_roster(
     Path(roster_id): Path<uuid::Uuid>,
     multipart: Multipart,
 ) -> Result<Json<Message<()>>, ModuleError> {
-    let response = services::roster::import_roster(state.pool.clone(), roster_id, multipart, user_id).await?;
-    Ok(Json(Message::new("Roster uploaded successfully", Some(response))))
+    let response =
+        services::roster::import_roster(state.pool.clone(), roster_id, multipart, user_id).await?;
+    Ok(Json(Message::new(
+        "Roster uploaded successfully",
+        Some(response),
+    )))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/roster/user-hall",
+    request_body = UpdateUserHallRequest,
+    responses(
+        (status = 200, description = "User hall updated successfully", body = MessageEmpty),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn update_user_hall(
+    Claims { user_id, .. }: Claims,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<UpdateUserHallRequest>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response = services::roster::update_user_hall(
+        state.pool.clone(),
+        payload.user_id,
+        payload.user_roster_id,
+        payload.hall,
+        user_id,
+    )
+    .await?;
+    Ok(Json(response))
 }

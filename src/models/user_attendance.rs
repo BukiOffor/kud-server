@@ -29,7 +29,16 @@ pub struct UserAttendance {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, AsExpression, Default, FromSqlRow, PartialEq, Eq,
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    AsExpression,
+    Default,
+    FromSqlRow,
+    PartialEq,
+    Eq,
+    utoipa::ToSchema,
 )]
 #[diesel(sql_type = Text)]
 pub enum AttendanceType {

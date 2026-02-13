@@ -51,7 +51,17 @@ impl User {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq, Hash, Default,
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    AsExpression,
+    FromSqlRow,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    utoipa::ToSchema,
 )]
 #[diesel(sql_type = Text)]
 pub enum Role {

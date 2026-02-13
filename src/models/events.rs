@@ -15,6 +15,7 @@ use super::*;
     AsChangeset,
     Insertable,
     QueryableByName,
+    utoipa::ToSchema,
 )]
 #[diesel(table_name = crate::schema::events)]
 pub struct Event {
@@ -32,7 +33,17 @@ pub struct Event {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq, Hash, Default,
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    AsExpression,
+    FromSqlRow,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    utoipa::ToSchema,
 )]
 #[diesel(sql_type = Text)]
 pub enum Location {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct Pagination {
     #[serde(default = "default_page")]
     pub page: i32,
@@ -21,13 +21,13 @@ impl Pagination {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PaginatedResult<T> {
     pub items: Vec<T>,
     pub metadata: Metadata,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct Metadata {
     pub page: i32,
     pub size: i32,
@@ -47,13 +47,13 @@ impl<T> PaginatedResult<T> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PaginatedResultWithContext<T, R: Serialize> {
     pub items: Vec<T>,
     pub metadata: MetadataWithContext<R>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MetadataWithContext<R: Serialize + Sized> {
     pub page: i32,
     pub size: i32,
@@ -80,7 +80,7 @@ impl<T, R: Serialize + Sized> PaginatedResultWithContext<T, R> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema, utoipa::IntoParams)]
 pub struct TaskFilterQuery {
     #[serde(default = "default_page")]
     pub page: i32,
@@ -94,7 +94,7 @@ pub struct TaskFilterQuery {
     pub unassigned: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema)]
 pub struct PaginationWithContext<T> {
     #[serde(default = "default_page")]
     pub page: i32,

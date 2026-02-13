@@ -28,6 +28,23 @@ pub fn log_routes(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/logs/",
+    params(
+        ("page" = i32, Query, description = "Page number"),
+        ("size" = i32, Query, description = "Page size"),
+        ("search" = Option<String>, Query, description = "Search query"),
+        ("filter" = Option<String>, Query, description = "Filter query"),
+        ("context" = Option<String>, Query, description = "Log context")
+    ),
+    responses(
+        (status = 200, description = "List of activity logs", body = PaginatedResult<ActivityLogResponse>)
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_logs(
     Claims { .. }: Claims,
     State(state): State<Arc<AppState>>,
@@ -39,6 +56,19 @@ pub async fn get_logs(
     Ok(Json(logs))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/logs/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "User activity logs", body = [ActivityLog])
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_user_activity(
     Claims { .. }: Claims,
     Path(id): Path<Uuid>,

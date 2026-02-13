@@ -4,7 +4,7 @@ use crate::models::user_attendance::AttendanceType;
 
 use super::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateEventRequest {
     pub title: String,
     pub description: String,
@@ -15,7 +15,7 @@ pub struct CreateEventRequest {
     pub grace_period_in_minutes: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CheckInWithIdentifierRequest {
     pub event_id: Uuid,
     pub identifier: String,
@@ -23,7 +23,7 @@ pub struct CheckInWithIdentifierRequest {
     pub location: Option<GeoPoint>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CheckIntoEventRequest {
     pub event_id: Uuid,
     pub user_id: Uuid,
@@ -31,7 +31,7 @@ pub struct CheckIntoEventRequest {
     pub location: Option<GeoPoint>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateEventRequest {
     pub event_id: Uuid,
     pub title: Option<String>,

@@ -147,5 +147,5 @@ impl utoipa::Modify for SecurityAddon {
 }
 
 pub fn swagger_routes() -> SwaggerUi {
-    SwaggerUi::new("/swagger-ui").url("/api/v1/openapi.json", ApiDoc::openapi())
+    SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi())
 }

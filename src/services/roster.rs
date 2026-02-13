@@ -78,6 +78,7 @@ pub async fn activate_roster(
         .run(|conn| {
             Box::pin(async move {
                 let users = crate::schema::users::table
+                    .filter(crate::schema::users::is_active.eq(true))
                     .select(crate::schema::users::id)
                     .load::<Uuid>(conn)
                     .await?;
@@ -577,4 +578,39 @@ pub async fn import_roster(
     crate::services::activity_logs::emit_log(log, &mut conn).await?;
 
     Ok(())
+}
+
+pub async fn update_user_hall(
+    pool: Arc<Pool>,
+    user_id: Uuid,
+    user_roster_id: Uuid,
+    hall: Hall,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    conn.build_transaction()
+        .run(|conn| {
+            Box::pin(async move {
+                diesel::update(crate::schema::users_rosters::table.find(user_roster_id))
+                    .set(crate::schema::users_rosters::hall.eq(&hall))
+                    .execute(conn)
+                    .await?;
+
+                diesel::update(crate::schema::users::table.find(user_id))
+                    .set(crate::schema::users::current_roster_hall.eq(&hall))
+                    .execute(conn)
+                    .await?;
+                Ok::<(), ModuleError>(())
+            })
+        })
+        .await?;
+
+    let log = ActivityLog::new(ActivityType::UserHallUpdated, performer_id)
+        .set_target_id(user_id)
+        .set_target_type("UserRoster".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+    Ok("User hall updated successfully".into())
 }

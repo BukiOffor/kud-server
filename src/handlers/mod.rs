@@ -26,5 +26,4 @@ pub fn get_routes(state: Arc<AppState>) -> Router {
         .merge(analytics::routes(state.clone()))
         .merge(logs::routes(state.clone()))
         .merge(roster::routes(state.clone()))
-        .merge(swagger::swagger_routes())
 }

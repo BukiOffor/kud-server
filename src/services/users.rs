@@ -222,7 +222,6 @@ pub async fn update_user(
     }
 }
 
-
 pub async fn admin_update_user(
     pool: Arc<Pool>,
     mut payload: AdminUpdateUserRequest,
@@ -257,7 +256,9 @@ pub async fn admin_update_user(
             payload.country.map(|v| schema::users::country.eq(v)),
             payload.role.map(|v| schema::users::role.eq(v)),
             payload.email.map(|v| schema::users::email.eq(v)),
-            payload.year_joined.map(|v| schema::users::year_joined.eq(v)),
+            payload
+                .year_joined
+                .map(|v| schema::users::year_joined.eq(v)),
             payload.password.map(|v| schema::users::password_hash.eq(v)),
         ))
         .execute(&mut conn)
@@ -285,7 +286,6 @@ pub async fn admin_update_user(
         Err(e) => Err(e.into()),
     }
 }
-
 
 pub async fn delete_user(
     pool: Arc<Pool>,

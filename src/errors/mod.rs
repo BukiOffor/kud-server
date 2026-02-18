@@ -115,9 +115,7 @@ impl IntoResponse for ModuleError {
                 )
                     .into_response()
             }
-            Self::ItemNotFound
-            | Self::Error(_)
-            | Self::BadRequest(_) => {
+            Self::ItemNotFound | Self::Error(_) | Self::BadRequest(_) => {
                 let message = ErrorMessage::default().build(self.to_string(), 400);
                 (axum::http::StatusCode::BAD_REQUEST, axum::Json(message)).into_response()
             }

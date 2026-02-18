@@ -197,12 +197,12 @@ pub async fn activate_roster(
                     .await?;
 
                 // update all users in the roster to have the new roster id
-                for u_r in user_roster {
-                    diesel::update(crate::schema::users::table.find(u_r.user_id))
-                        .set(crate::schema::users::current_roster_hall.eq(u_r.hall))
-                        .execute(conn)
-                        .await?;
-                }
+                // for u_r in user_roster {
+                //     diesel::update(crate::schema::users::table.find(u_r.user_id))
+                //         .set(crate::schema::users::current_roster_hall.eq(u_r.hall))
+                //         .execute(conn)
+                //         .await?;
+                // }
                 Ok::<(), ModuleError>(())
             })
         })
@@ -225,120 +225,35 @@ pub async fn share_roster(
     conn.build_transaction()
         .run(|conn| {
             Box::pin(async move {
-                let users = crate::schema::users::table
-                    .select(crate::schema::users::id)
-                    .load::<Uuid>(conn)
-                    .await?;
-
-                let mut roster: Roster = crate::schema::rosters::table
+                let roster: Roster = crate::schema::rosters::table
                     .find(roster_id)
                     .first::<Roster>(conn)
                     .await?;
 
-                let mut user_roster = Vec::new();
-                let mut available_halls: Vec<Hall> = Hall::all();
-                //let mut exhausted_halls: HashSet<Hall> = HashSet::new();
-
-                for user in users {
-                    let past_halls = crate::schema::users_rosters::table
-                        .filter(crate::schema::users_rosters::user_id.eq(user))
-                        .limit(5)
-                        .filter(crate::schema::users_rosters::year.eq(&roster.year))
-                        .select(crate::schema::users_rosters::hall)
-                        .load::<Hall>(conn)
-                        .await?;
-
-                    // let past_halls = past_halls.into_iter()
-                    //     .filter(|hall| !exhausted_halls.contains(hall))
-                    //     .collect::<Vec<Hall>>();
-
-                    // Assign a random hall from available ones
-                    let mut assigned_hall = Hall::assign_hall(&past_halls, available_halls.clone());
-
-                    if assigned_hall.is_none() {
-                        // Fallback: assign any available hall or a random one if all are full
-                        assigned_hall = available_halls.choose(&mut rand::thread_rng()).cloned();
-                    }
-
-                    if let Some(hall) = assigned_hall {
-                        user_roster.push(UsersRoster::new(
-                            user,
-                            roster_id,
-                            hall.clone(),
-                            roster.year.clone(),
-                        ));
-                        match hall {
-                            Hall::Outside => roster.num_for_outside -= 1,
-                            Hall::Basement => roster.num_for_basement -= 1,
-                            Hall::HallOne => roster.num_for_hall_one -= 1,
-                            Hall::Gallery => roster.num_for_gallery -= 1,
-                            Hall::MainHall => roster.num_for_main_hall -= 1,
-                        }
-
-                        // Remove hall from available list if capacity is reached
-                        if roster.num_for_outside <= 0 {
-                            available_halls.retain(|h| h != &Hall::Outside);
-                            //exhausted_halls.insert(Hall::Outside);
-                        }
-                        if roster.num_for_basement <= 0 {
-                            available_halls.retain(|h| h != &Hall::Basement);
-                            //exhausted_halls.insert(Hall::Basement);
-                        }
-                        if roster.num_for_hall_one <= 0 {
-                            available_halls.retain(|h| h != &Hall::HallOne);
-                            //exhausted_halls.insert(Hall::HallOne);
-                        }
-                        if roster.num_for_gallery <= 0 {
-                            available_halls.retain(|h| h != &Hall::Gallery);
-                            //exhausted_halls.insert(Hall::Gallery);
-                        }
-                        if roster.num_for_main_hall <= 0 {
-                            available_halls.retain(|h| h != &Hall::MainHall);
-                            // exhausted_halls.insert(Hall::MainHall);
-                        }
-                    }
+                if !roster.is_active {
+                    return Err(ModuleError::Error(
+                        "Roster is not active, cannot share an inactive roster".into(),
+                    ));
                 }
 
-                // Delete previous assignments for this roster if any
-                diesel::delete(
-                    crate::schema::users_rosters::table
-                        .filter(crate::schema::users_rosters::roster_id.eq(roster_id)),
-                )
-                .execute(conn)
-                .await?;
-
-                // Batch insert roster assignments
-                diesel::insert_into(crate::schema::users_rosters::table)
-                    .values(&user_roster)
-                    .execute(conn)
+                let user_roster = crate::schema::users_rosters::table
+                    .filter(crate::schema::users_rosters::roster_id.eq(roster_id))
+                    .select(UsersRoster::as_select())
+                    .load::<UsersRoster>(conn)
                     .await?;
 
-                // deactivate previous active roster
-                let prev_active: Option<Roster> = crate::schema::rosters::table
-                    .filter(crate::schema::rosters::is_active.eq(true))
-                    .first::<Roster>(conn)
-                    .await
-                    .optional()?;
-
-                if let Some(prev) = prev_active {
-                    diesel::update(crate::schema::rosters::table.find(prev.id))
-                        .set(crate::schema::rosters::is_active.eq(false))
+                for u_r in user_roster {
+                    diesel::update(crate::schema::users::table.find(u_r.user_id))
+                        .set(crate::schema::users::current_roster_hall.eq(u_r.hall))
                         .execute(conn)
                         .await?;
                 }
-
-                // Activate new roster
-                diesel::update(crate::schema::rosters::table.find(roster_id))
-                    .set(crate::schema::rosters::is_active.eq(true))
-                    .execute(conn)
-                    .await?;
-
                 Ok::<(), ModuleError>(())
             })
         })
         .await?;
 
-    let log = ActivityLog::new(ActivityType::RosterActivated, performer_id)
+    let log = ActivityLog::new(ActivityType::RosterShared, performer_id)
         .set_target_id(roster_id)
         .set_target_type("Roster".into())
         .finish();
@@ -552,7 +467,9 @@ pub async fn import_roster(
                     }
                 }
                 if user_roster.is_empty() {
-                    return Err(ModuleError::BadRequest("could not match any user in the uploaded roster".into()));
+                    return Err(ModuleError::BadRequest(
+                        "could not match any user in the uploaded roster".into(),
+                    ));
                 }
                 diesel::insert_into(crate::schema::users_rosters::table)
                     .values(&user_roster)

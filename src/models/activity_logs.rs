@@ -39,6 +39,7 @@ pub enum ActivityType {
     AttendanceRevoked,
     RosterImported,
     UserHallUpdated,
+    RosterShared,
 }
 
 impl ActivityType {
@@ -66,6 +67,7 @@ impl ActivityType {
             ActivityType::AttendanceRevoked => "Revoked a user's attendance.".into(),
             ActivityType::RosterImported => "Imported a new roster.".into(),
             ActivityType::UserHallUpdated => "Updated a user's hall assignment.".into(),
+            ActivityType::RosterShared => "Shared a roster.".into(),
         }
     }
 }

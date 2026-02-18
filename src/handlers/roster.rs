@@ -26,6 +26,8 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/export/{id}/hall", get(export_roster_by_hall))
         .route("/import/{id}", post(import_roster))
         .route("/hall", patch(update_user_hall))
+        .route("/{id}/stats", get(get_roster_stats_per_hall))
+        .route("/{id}/stats/{hall}", get(get_roster_stats_for_hall))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
@@ -251,5 +253,51 @@ pub async fn update_user_hall(
         user_id,
     )
     .await?;
+    Ok(Json(response))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/roster/{id}/stats",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster statistics per hall", body = [RosterStatsByHallDto]),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn get_roster_stats_per_hall(
+    Path(id): Path<uuid::Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<RosterStatsByHallDto>>, ModuleError> {
+    let response = services::roster::get_roster_stats_per_hall(id, state.pool.clone()).await?;
+    Ok(Json(response))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/roster/{id}/stats/{hall}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID"),
+        ("hall" = Hall, Path, description = "Hall name")
+    ),
+    responses(
+        (status = 200, description = "Roster statistics for a specific hall", body = RosterStatsByHallDto),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn get_roster_stats_for_hall(
+    Path((id, hall)): Path<(uuid::Uuid, Hall)>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<RosterStatsByHallDto>, ModuleError> {
+    let response =
+        services::roster::get_roster_stats_for_hall(id, hall, state.pool.clone()).await?;
     Ok(Json(response))
 }

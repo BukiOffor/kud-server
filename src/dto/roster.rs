@@ -89,3 +89,16 @@ pub struct UpdateUserHallRequest {
     pub user_roster_id: Uuid,
     pub hall: Hall,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct RosterStatsByHallDto {
+    pub hall: Hall,
+    pub roster_id: Uuid,
+    pub total_expected: i32,
+    pub total_assigned: i32,
+    pub total_unassigned: i32,
+    pub percentage_assigned: f64,
+    pub percentage_unassigned: f64,
+    pub number_of_male: u32,
+    pub number_of_female: u32,
+}

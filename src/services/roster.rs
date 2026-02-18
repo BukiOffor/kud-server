@@ -531,3 +531,100 @@ pub async fn update_user_hall(
 
     Ok("User hall updated successfully".into())
 }
+
+pub async fn get_roster_stats_per_hall(
+    roster_id: Uuid,
+    pool: Arc<Pool>,
+) -> Result<Vec<RosterStatsByHallDto>, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    let roster = crate::schema::rosters::table
+        .find(roster_id)
+        .first::<Roster>(&mut conn)
+        .await
+        .map_err(|_| ModuleError::ResourceNotFound("Roster not found".into()))?;
+
+    let mut stats = Vec::new();
+    let halls = Hall::all();
+
+    for hall in halls {
+        let hall_stats = calculate_hall_stats(&mut conn, &roster, hall).await?;
+        stats.push(hall_stats);
+    }
+
+    Ok(stats)
+}
+
+pub async fn get_roster_stats_for_hall(
+    roster_id: Uuid,
+    hall: Hall,
+    pool: Arc<Pool>,
+) -> Result<RosterStatsByHallDto, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    let roster = crate::schema::rosters::table
+        .find(roster_id)
+        .first::<Roster>(&mut conn)
+        .await
+        .map_err(|_| ModuleError::ResourceNotFound("Roster not found".into()))?;
+
+    calculate_hall_stats(&mut conn, &roster, hall).await
+}
+
+async fn calculate_hall_stats(
+    conn: &mut crate::Connection<'_>,
+    roster: &Roster,
+    hall: Hall,
+) -> Result<RosterStatsByHallDto, ModuleError> {
+    let total_expected = match hall {
+        Hall::HallOne => roster.num_for_hall_one,
+        Hall::MainHall => roster.num_for_main_hall,
+        Hall::Gallery => roster.num_for_gallery,
+        Hall::Basement => roster.num_for_basement,
+        Hall::Outside => roster.num_for_outside,
+    };
+
+    let assignments = crate::schema::users_rosters::table
+        .filter(crate::schema::users_rosters::roster_id.eq(roster.id))
+        .filter(crate::schema::users_rosters::hall.eq(&hall))
+        .inner_join(crate::schema::users::table)
+        .select((crate::schema::users::gender,))
+        .load::<(Option<String>,)>(conn)
+        .await?;
+
+    let total_assigned = assignments.len() as i32;
+    let total_unassigned = (total_expected - total_assigned).max(0);
+
+    let female_count = assignments
+        .iter()
+        .filter(|(g,)| g.as_deref().map(|s| s.to_lowercase()) == Some("female".to_string()))
+        .count() as u32;
+    let male_count = assignments
+        .iter()
+        .filter(|(g,)| g.as_deref().map(|s| s.to_lowercase()) == Some("male".to_string()))
+        .count() as u32;
+
+    let percentage_assigned = if total_expected > 0 {
+        (total_assigned as f64 / total_expected as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let percentage_unassigned = if total_expected > 0 {
+        (total_unassigned as f64 / total_expected as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    Ok(RosterStatsByHallDto {
+        hall,
+        roster_id: roster.id,
+        total_expected,
+        total_assigned,
+        total_unassigned,
+        percentage_assigned,
+        percentage_unassigned,
+        number_of_male: male_count,
+        number_of_female: female_count,
+    })
+}

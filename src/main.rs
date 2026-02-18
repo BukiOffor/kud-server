@@ -81,15 +81,15 @@ async fn main() {
                 .parse::<HeaderValue>()
                 .unwrap(),
         ]);
-    server::info!("Starting Web Server ............");
     let app = Router::new()
         .merge(handlers::get_routes(state.clone()))
-        .merge(swagger::swagger_routes())
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .layer(cors);
 
-    let api = axum::Router::new().nest("/api/v1", app);
+    let api = axum::Router::new()
+        .nest("/api/v1", app)
+        .merge(swagger::swagger_routes());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:9898").await.unwrap();
     server::info!("Listening on {}", listener.local_addr().unwrap());

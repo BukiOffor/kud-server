@@ -228,7 +228,7 @@ pub async fn import_roster(
 
 #[utoipa::path(
     patch,
-    path = "/api/v1/roster/user-hall",
+    path = "/api/v1/roster/hall",
     request_body = UpdateUserHallRequest,
     responses(
         (status = 200, description = "User hall updated successfully", body = MessageEmpty),

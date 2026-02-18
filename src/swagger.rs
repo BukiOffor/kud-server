@@ -45,6 +45,7 @@ use utoipa_swagger_ui::SwaggerUi;
         handlers::roster::activate_roster,
         handlers::roster::delete_roster,
         handlers::roster::view_roster_assignments,
+        handlers::roster::update_user_hall,
         handlers::logs::get_logs,
         handlers::logs::get_user_activity,
     ),
@@ -98,6 +99,7 @@ use utoipa_swagger_ui::SwaggerUi;
             dto::MessageEventStatsReport,
             dto::MessageRosterDto,
             dto::MessageRosterAssignmentDtoVec,
+            dto::roster::UpdateUserHallRequest,
         )
     ),
     tags(
@@ -130,7 +132,6 @@ struct SecurityAddon;
 //     }
 // }
 
-
 impl utoipa::Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         if let Some(components) = openapi.components.as_mut() {
@@ -147,5 +148,5 @@ impl utoipa::Modify for SecurityAddon {
 }
 
 pub fn swagger_routes() -> SwaggerUi {
-    SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi())
+    SwaggerUi::new("/swagger-ui").url("/api/v1/openapi.json", ApiDoc::openapi())
 }

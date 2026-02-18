@@ -267,6 +267,14 @@ Retrieve all rosters.
 - **Path:** `/roster/all`
 - **Response:** `Array<Roster>`
 
+### Update User Hall
+Update a user's hall assignment in a roster.
+
+- **Method:** `PATCH`
+- **Path:** `/roster/user-hall`
+- **Request Body:** `UpdateUserHallRequest`
+- **Response:** `Message<()>`
+
 ---
 
 ## Analytics (`/analytics`) (Admin Only)
@@ -318,6 +326,11 @@ Retrieve detailed attendance history and summary for a specific user.
 #### Role
 ```typescript
 type Role = "Admin" | "User" | "Technical";
+```
+
+#### Hall
+```typescript
+type Hall = "MainHall" | "HallOne" | "Gallery" | "Basement" | "Outside";
 ```
 
 #### AttendanceType
@@ -486,6 +499,15 @@ interface UpdateRosterRequest {
   num_for_outside?: number;
   year?: string;
 }
+
+#### UpdateUserHallRequest
+```typescript
+interface UpdateUserHallRequest {
+  user_id: string; // UUID
+  user_roster_id: string; // UUID
+  hall: Hall;
+}
+```
 ```
 
 #### Pagination

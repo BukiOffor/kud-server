@@ -73,6 +73,7 @@ pub struct RosterAssignmentDto {
     pub user_id: Uuid,
     pub first_name: String,
     pub last_name: String,
+    pub gender: Option<String>,
     pub reg_no: String,
     pub hall: Hall,
 }

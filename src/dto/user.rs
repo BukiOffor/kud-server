@@ -30,6 +30,7 @@ pub struct UserDto {
     pub state: Option<String>,
     pub country: Option<String>,
     pub is_active: bool,
+    pub device_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

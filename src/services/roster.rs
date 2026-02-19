@@ -390,6 +390,7 @@ pub async fn view_roster_assignments(
             crate::schema::users_rosters::user_id,
             crate::schema::users::first_name,
             crate::schema::users::last_name,
+            crate::schema::users::gender,
             crate::schema::users::reg_no,
             crate::schema::users_rosters::hall,
         ))

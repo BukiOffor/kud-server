@@ -91,6 +91,13 @@ pub struct UpdateUserHallRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct AddUserToRosterRequest {
+    pub user_id: Uuid,
+    pub roster_id: Uuid,
+    pub hall: Hall,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RosterStatsByHallDto {
     pub hall: Hall,
     pub roster_id: Uuid,

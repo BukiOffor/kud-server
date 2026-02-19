@@ -28,6 +28,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/hall", patch(update_user_hall))
         .route("/{id}/stats", get(get_roster_stats_per_hall))
         .route("/{id}/stats/{hall}", get(get_roster_stats_for_hall))
+        .route("/add-user", post(add_user_to_roster))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
@@ -299,5 +300,27 @@ pub async fn get_roster_stats_for_hall(
 ) -> Result<Json<RosterStatsByHallDto>, ModuleError> {
     let response =
         services::roster::get_roster_stats_for_hall(id, hall, state.pool.clone()).await?;
+    Ok(Json(response))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/roster/add-user",
+    request_body = AddUserToRosterRequest,
+    responses(
+        (status = 200, description = "User added to roster successfully", body = MessageEmpty),
+        (status = 400, description = "Bad request")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn add_user_to_roster(
+    Claims { user_id, .. }: Claims,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<AddUserToRosterRequest>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    let response =
+        services::roster::add_user_to_roster(state.pool.clone(), payload, user_id).await?;
     Ok(Json(response))
 }

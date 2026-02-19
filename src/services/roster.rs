@@ -628,3 +628,50 @@ async fn calculate_hall_stats(
         number_of_female: female_count,
     })
 }
+pub async fn add_user_to_roster(
+    pool: Arc<Pool>,
+    payload: AddUserToRosterRequest,
+    performer_id: Uuid,
+) -> Result<Message<()>, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    conn.build_transaction()
+        .run(|conn| {
+            Box::pin(async move {
+                let roster: Roster = crate::schema::rosters::table
+                    .find(payload.roster_id)
+                    .first::<Roster>(conn)
+                    .await
+                    .map_err(|_| ModuleError::ResourceNotFound("Roster not found".into()))?;
+
+                let new_assignment = UsersRoster::new(
+                    payload.user_id,
+                    payload.roster_id,
+                    payload.hall.clone(),
+                    roster.year.clone(),
+                );
+
+                diesel::insert_into(crate::schema::users_rosters::table)
+                    .values(&new_assignment)
+                    .on_conflict_do_nothing()
+                    .execute(conn)
+                    .await?;
+
+                diesel::update(crate::schema::users::table.find(payload.user_id))
+                    .set(crate::schema::users::current_roster_hall.eq(payload.hall.clone()))
+                    .execute(conn)
+                    .await?;
+
+                Ok::<(), ModuleError>(())
+            })
+        })
+        .await?;
+
+    let log = ActivityLog::new(ActivityType::RosterActivated, performer_id) // Using RosterActivated as a placeholder if no specific type exists
+        .set_target_id(payload.roster_id)
+        .set_target_type("Roster".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+    Ok(Message::new("User added to roster successfully", None))
+}

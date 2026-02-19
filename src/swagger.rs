@@ -43,9 +43,11 @@ use utoipa_swagger_ui::SwaggerUi;
         handlers::roster::update_roster,
         handlers::roster::get_all_rosters,
         handlers::roster::activate_roster,
+        handlers::roster::activate_roster_gendered,
         handlers::roster::delete_roster,
         handlers::roster::view_roster_assignments,
         handlers::roster::update_user_hall,
+        handlers::roster::get_user_roster_history,
         handlers::logs::get_logs,
         handlers::logs::get_user_activity,
     ),
@@ -100,6 +102,7 @@ use utoipa_swagger_ui::SwaggerUi;
             dto::MessageRosterDto,
             dto::MessageRosterAssignmentDtoVec,
             dto::roster::UpdateUserHallRequest,
+            dto::roster::UserRosterHistoryDto,
         )
     ),
     tags(

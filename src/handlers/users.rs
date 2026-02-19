@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use super::*;
 use crate::auth::middleware as auth_middleware;
 use crate::dto::user::*;

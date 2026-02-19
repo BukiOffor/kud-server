@@ -42,6 +42,16 @@ diesel::table! {
         end_date -> Date,
         year -> Text,
         created_at -> Timestamp,
+        num_male_for_hall_one -> Nullable<Int4>,
+        num_female_for_hall_one -> Nullable<Int4>,
+        num_male_for_main_hall -> Nullable<Int4>,
+        num_female_for_main_hall -> Nullable<Int4>,
+        num_male_for_gallery -> Nullable<Int4>,
+        num_female_for_gallery -> Nullable<Int4>,
+        num_male_for_basement -> Nullable<Int4>,
+        num_female_for_basement -> Nullable<Int4>,
+        num_male_for_outside -> Nullable<Int4>,
+        num_female_for_outside -> Nullable<Int4>,
     }
 }
 

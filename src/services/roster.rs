@@ -217,11 +217,246 @@ pub async fn activate_roster(
     Ok(())
 }
 
-pub async fn share_roster(
-    conn: &mut crate::Connection<'_>,
+pub async fn activate_roster_gendered(
+    conn_pool: Arc<Pool>,
     roster_id: Uuid,
     performer_id: Uuid,
 ) -> Result<(), ModuleError> {
+    let mut conn = conn_pool.get().await?;
+
+    conn.build_transaction()
+        .run(|conn| {
+            Box::pin(async move {
+                // Load active users with their gender
+                let users: Vec<(Uuid, Option<String>)> = crate::schema::users::table
+                    .filter(crate::schema::users::is_active.eq(true))
+                    .select((crate::schema::users::id, crate::schema::users::gender))
+                    .load::<(Uuid, Option<String>)>(conn)
+                    .await?;
+
+                let roster: Roster = crate::schema::rosters::table
+                    .find(roster_id)
+                    .first::<Roster>(conn)
+                    .await?;
+
+                if roster.is_active {
+                    return Err(ModuleError::Error("Roster is already active".into()));
+                }
+
+                if roster.end_date < chrono::Utc::now().date_naive() {
+                    return Err(ModuleError::Error("Roster end date is in the past".into()));
+                }
+
+                if chrono::Utc::now().date_naive() > roster.start_date {
+                    return Err(ModuleError::Error(
+                        "Roster start date is in the future".into(),
+                    ));
+                }
+
+                // Build per-hall gender capacity tracking
+                struct HallGenderSlots {
+                    total_remaining: i32,
+                    male_remaining: i32,
+                    female_remaining: i32,
+                }
+
+                let mut hall_slots: std::collections::HashMap<Hall, HallGenderSlots> =
+                    std::collections::HashMap::new();
+
+                for hall in Hall::all() {
+                    let (total, male, female) = match &hall {
+                        Hall::HallOne => (
+                            roster.num_for_hall_one,
+                            roster.num_male_for_hall_one.unwrap_or(0),
+                            roster.num_female_for_hall_one.unwrap_or(0),
+                        ),
+                        Hall::MainHall => (
+                            roster.num_for_main_hall,
+                            roster.num_male_for_main_hall.unwrap_or(0),
+                            roster.num_female_for_main_hall.unwrap_or(0),
+                        ),
+                        Hall::Gallery => (
+                            roster.num_for_gallery,
+                            roster.num_male_for_gallery.unwrap_or(0),
+                            roster.num_female_for_gallery.unwrap_or(0),
+                        ),
+                        Hall::Basement => (
+                            roster.num_for_basement,
+                            roster.num_male_for_basement.unwrap_or(0),
+                            roster.num_female_for_basement.unwrap_or(0),
+                        ),
+                        Hall::Outside => (
+                            roster.num_for_outside,
+                            roster.num_male_for_outside.unwrap_or(0),
+                            roster.num_female_for_outside.unwrap_or(0),
+                        ),
+                    };
+                    hall_slots.insert(
+                        hall,
+                        HallGenderSlots {
+                            total_remaining: total,
+                            male_remaining: male,
+                            female_remaining: female,
+                        },
+                    );
+                }
+
+                let mut user_roster = Vec::new();
+
+                for (user_id, gender) in &users {
+                    let past_halls: Vec<Hall> = crate::schema::users_rosters::table
+                        .filter(crate::schema::users_rosters::user_id.eq(user_id))
+                        .limit(5)
+                        .filter(crate::schema::users_rosters::year.eq(&roster.year))
+                        .select(crate::schema::users_rosters::hall)
+                        .load::<Hall>(conn)
+                        .await?;
+
+                    let gender_lower = gender.as_deref().map(|s| s.to_lowercase());
+                    let is_male = gender_lower.as_deref() == Some("male");
+                    let is_female = gender_lower.as_deref() == Some("female");
+
+                    // Build available halls: only halls that still have capacity
+                    let available_halls: Vec<Hall> = Hall::all()
+                        .into_iter()
+                        .filter(|h| {
+                            if let Some(slots) = hall_slots.get(h) {
+                                if slots.total_remaining <= 0 {
+                                    return false;
+                                }
+                                if is_male && slots.male_remaining <= 0 {
+                                    // Check if there's general capacity (total > male + female assigned)
+                                    return true; // still has total capacity, allow fallback
+                                }
+                                if is_female && slots.female_remaining <= 0 {
+                                    return true; // still has total capacity, allow fallback
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                        .collect();
+
+                    // Prefer halls that have gender-specific slots available
+                    let preferred_halls: Vec<Hall> = if is_male {
+                        available_halls
+                            .iter()
+                            .filter(|h| {
+                                hall_slots
+                                    .get(h)
+                                    .map(|s| s.male_remaining > 0)
+                                    .unwrap_or(false)
+                            })
+                            .cloned()
+                            .collect()
+                    } else if is_female {
+                        available_halls
+                            .iter()
+                            .filter(|h| {
+                                hall_slots
+                                    .get(h)
+                                    .map(|s| s.female_remaining > 0)
+                                    .unwrap_or(false)
+                            })
+                            .cloned()
+                            .collect()
+                    } else {
+                        available_halls.clone()
+                    };
+
+                    // Try preferred halls first (gender-specific), then fallback to any available
+                    let halls_to_try = if preferred_halls.is_empty() {
+                        available_halls.clone()
+                    } else {
+                        preferred_halls
+                    };
+
+                    let mut assigned_hall = Hall::assign_hall(&past_halls, halls_to_try);
+
+                    if assigned_hall.is_none() {
+                        // Fallback: try any available hall
+                        assigned_hall = Hall::assign_hall(&past_halls, available_halls);
+                    }
+
+                    if assigned_hall.is_none() {
+                        // Last resort: random from all halls
+                        assigned_hall = Hall::all().choose(&mut rand::thread_rng()).cloned();
+                    }
+
+                    if let Some(ref hall) = assigned_hall {
+                        user_roster.push(UsersRoster::new(
+                            *user_id,
+                            roster_id,
+                            hall.clone(),
+                            roster.year.clone(),
+                        ));
+
+                        if let Some(slots) = hall_slots.get_mut(hall) {
+                            slots.total_remaining -= 1;
+                            if is_male {
+                                slots.male_remaining -= 1;
+                            } else if is_female {
+                                slots.female_remaining -= 1;
+                            }
+                        }
+                    }
+                }
+
+                // Delete previous assignments for this roster if any
+                diesel::delete(
+                    crate::schema::users_rosters::table
+                        .filter(crate::schema::users_rosters::roster_id.eq(roster_id)),
+                )
+                .execute(conn)
+                .await?;
+
+                // Batch insert roster assignments
+                diesel::insert_into(crate::schema::users_rosters::table)
+                    .values(&user_roster)
+                    .execute(conn)
+                    .await?;
+
+                // deactivate previous active roster
+                let prev_active: Option<Roster> = crate::schema::rosters::table
+                    .filter(crate::schema::rosters::is_active.eq(true))
+                    .first::<Roster>(conn)
+                    .await
+                    .optional()?;
+
+                if let Some(prev) = prev_active {
+                    diesel::update(crate::schema::rosters::table.find(prev.id))
+                        .set(crate::schema::rosters::is_active.eq(false))
+                        .execute(conn)
+                        .await?;
+                }
+
+                // Activate new roster
+                diesel::update(crate::schema::rosters::table.find(roster_id))
+                    .set(crate::schema::rosters::is_active.eq(true))
+                    .execute(conn)
+                    .await?;
+
+                Ok::<(), ModuleError>(())
+            })
+        })
+        .await?;
+
+    let log = ActivityLog::new(ActivityType::RosterActivated, performer_id)
+        .set_target_id(roster_id)
+        .set_target_type("Roster".into())
+        .finish();
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
+
+    Ok(())
+}
+
+pub async fn share_roster(
+    pool: Arc<Pool>,
+    roster_id: Uuid,
+    performer_id: Uuid,
+) -> Result<(), ModuleError> {
+    let mut conn = pool.get().await?;
     conn.build_transaction()
         .run(|conn| {
             Box::pin(async move {
@@ -257,8 +492,7 @@ pub async fn share_roster(
         .set_target_id(roster_id)
         .set_target_type("Roster".into())
         .finish();
-    crate::services::activity_logs::emit_log(log, conn).await?;
-
+    crate::services::activity_logs::emit_log(log, &mut conn).await?;
     Ok(())
 }
 
@@ -675,4 +909,31 @@ pub async fn add_user_to_roster(
     crate::services::activity_logs::emit_log(log, &mut conn).await?;
 
     Ok(Message::new("User added to roster successfully", None))
+}
+
+pub async fn get_user_roster_history(
+    pool: Arc<Pool>,
+    user_id: Uuid,
+) -> Result<Vec<UserRosterHistoryDto>, ModuleError> {
+    let mut conn = pool.get().await?;
+
+    let history = crate::schema::users_rosters::table
+        .filter(crate::schema::users_rosters::user_id.eq(user_id))
+        .inner_join(crate::schema::rosters::table)
+        .select((
+            crate::schema::users_rosters::id,
+            crate::schema::users_rosters::roster_id,
+            crate::schema::rosters::name,
+            crate::schema::users_rosters::hall,
+            crate::schema::users_rosters::year,
+            crate::schema::rosters::start_date,
+            crate::schema::rosters::end_date,
+            crate::schema::rosters::is_active,
+            crate::schema::users_rosters::created_at,
+        ))
+        .order(crate::schema::users_rosters::created_at.desc())
+        .load::<UserRosterHistoryDto>(&mut conn)
+        .await?;
+
+    Ok(history)
 }

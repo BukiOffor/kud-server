@@ -20,6 +20,8 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/update", patch(update_roster))
         .route("/all", get(get_all_rosters))
         .route("/activate/{id}", patch(activate_roster))
+        .route("/activate-gendered/{id}", patch(activate_roster_gendered))
+        .route("/share/{id}", patch(share_roster))
         .route("/{id}", delete(delete_roster))
         .route("/{id}/assignments", get(view_roster_assignments))
         .route("/export/{id}", get(export_roster))
@@ -29,6 +31,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .route("/{id}/stats", get(get_roster_stats_per_hall))
         .route("/{id}/stats/{hall}", get(get_roster_stats_for_hall))
         .route("/add-user", post(add_user_to_roster))
+        .route("/history/{user_id}", get(get_user_roster_history))
         .layer(ServiceBuilder::new().layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth::middleware::admin_authorize,
@@ -148,6 +151,32 @@ pub async fn activate_roster(
 ) -> Result<Json<Message<()>>, ModuleError> {
     services::roster::activate_roster(state.pool.clone(), id, user_id).await?;
     Ok(Json(Message::new("Roster activated successfully", None)))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/roster/activate-gendered/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster activated with gender-aware assignments", body = MessageEmpty),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn activate_roster_gendered(
+    Path(id): Path<uuid::Uuid>,
+    Claims { user_id, .. }: Claims,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    services::roster::activate_roster_gendered(state.pool.clone(), id, user_id).await?;
+    Ok(Json(Message::new(
+        "Roster activated with gender-aware assignments",
+        None,
+    )))
 }
 
 #[utoipa::path(
@@ -323,4 +352,49 @@ pub async fn add_user_to_roster(
     let response =
         services::roster::add_user_to_roster(state.pool.clone(), payload, user_id).await?;
     Ok(Json(response))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/roster/history/{user_id}",
+    params(
+        ("user_id" = uuid::Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "User roster history", body = [UserRosterHistoryDto]),
+        (status = 404, description = "User not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn get_user_roster_history(
+    Path(user_id): Path<uuid::Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<UserRosterHistoryDto>>, ModuleError> {
+    let response = services::roster::get_user_roster_history(state.pool.clone(), user_id).await?;
+    Ok(Json(response))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/roster/share/{id}",
+    params(
+        ("id" = uuid::Uuid, Path, description = "Roster ID")
+    ),
+    responses(
+        (status = 200, description = "Roster shared successfully", body = MessageEmpty),
+        (status = 404, description = "Roster not found")
+    ),
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn share_roster(
+    Path(id): Path<uuid::Uuid>,
+    Claims { user_id, .. }: Claims,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Message<()>>, ModuleError> {
+    services::roster::share_roster(state.pool.clone(), id, user_id).await?;
+    Ok(Json(Message::new("Roster shared successfully", None)))
 }

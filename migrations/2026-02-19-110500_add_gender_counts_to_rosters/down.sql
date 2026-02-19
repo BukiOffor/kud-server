@@ -1,0 +1,11 @@
+ALTER TABLE rosters
+    DROP COLUMN num_male_for_hall_one,
+    DROP COLUMN num_female_for_hall_one,
+    DROP COLUMN num_male_for_main_hall,
+    DROP COLUMN num_female_for_main_hall,
+    DROP COLUMN num_male_for_gallery,
+    DROP COLUMN num_female_for_gallery,
+    DROP COLUMN num_male_for_basement,
+    DROP COLUMN num_female_for_basement,
+    DROP COLUMN num_male_for_outside,
+    DROP COLUMN num_female_for_outside;

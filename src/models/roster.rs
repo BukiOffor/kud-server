@@ -28,6 +28,16 @@ pub struct Roster {
     pub end_date: chrono::NaiveDate,
     pub year: String,
     pub created_at: chrono::NaiveDateTime,
+    pub num_male_for_hall_one: Option<i32>,
+    pub num_female_for_hall_one: Option<i32>,
+    pub num_male_for_main_hall: Option<i32>,
+    pub num_female_for_main_hall: Option<i32>,
+    pub num_male_for_gallery: Option<i32>,
+    pub num_female_for_gallery: Option<i32>,
+    pub num_male_for_basement: Option<i32>,
+    pub num_female_for_basement: Option<i32>,
+    pub num_male_for_outside: Option<i32>,
+    pub num_female_for_outside: Option<i32>,
 }
 
 #[derive(

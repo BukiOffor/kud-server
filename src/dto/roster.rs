@@ -14,6 +14,16 @@ pub struct NewRoster {
     pub num_for_basement: i32,
     pub num_for_outside: i32,
     pub year: String,
+    pub num_male_for_hall_one: Option<i32>,
+    pub num_female_for_hall_one: Option<i32>,
+    pub num_male_for_main_hall: Option<i32>,
+    pub num_female_for_main_hall: Option<i32>,
+    pub num_male_for_gallery: Option<i32>,
+    pub num_female_for_gallery: Option<i32>,
+    pub num_male_for_basement: Option<i32>,
+    pub num_female_for_basement: Option<i32>,
+    pub num_male_for_outside: Option<i32>,
+    pub num_female_for_outside: Option<i32>,
 }
 impl From<NewRoster> for Roster {
     fn from(roster: NewRoster) -> Self {
@@ -30,6 +40,16 @@ impl From<NewRoster> for Roster {
             end_date: roster.end_date,
             year: roster.year,
             created_at: chrono::Local::now().naive_local(),
+            num_male_for_hall_one: roster.num_male_for_hall_one,
+            num_female_for_hall_one: roster.num_female_for_hall_one,
+            num_male_for_main_hall: roster.num_male_for_main_hall,
+            num_female_for_main_hall: roster.num_female_for_main_hall,
+            num_male_for_gallery: roster.num_male_for_gallery,
+            num_female_for_gallery: roster.num_female_for_gallery,
+            num_male_for_basement: roster.num_male_for_basement,
+            num_female_for_basement: roster.num_female_for_basement,
+            num_male_for_outside: roster.num_male_for_outside,
+            num_female_for_outside: roster.num_female_for_outside,
         }
     }
 }
@@ -49,6 +69,16 @@ pub struct RosterDto {
     pub end_date: chrono::NaiveDate,
     pub year: String,
     pub created_at: chrono::NaiveDateTime,
+    pub num_male_for_hall_one: Option<i32>,
+    pub num_female_for_hall_one: Option<i32>,
+    pub num_male_for_main_hall: Option<i32>,
+    pub num_female_for_main_hall: Option<i32>,
+    pub num_male_for_gallery: Option<i32>,
+    pub num_female_for_gallery: Option<i32>,
+    pub num_male_for_basement: Option<i32>,
+    pub num_female_for_basement: Option<i32>,
+    pub num_male_for_outside: Option<i32>,
+    pub num_female_for_outside: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsChangeset, utoipa::ToSchema)]
@@ -65,6 +95,16 @@ pub struct UpdateRosterRequest {
     pub num_for_basement: Option<i32>,
     pub num_for_outside: Option<i32>,
     pub year: Option<String>,
+    pub num_male_for_hall_one: Option<i32>,
+    pub num_female_for_hall_one: Option<i32>,
+    pub num_male_for_main_hall: Option<i32>,
+    pub num_female_for_main_hall: Option<i32>,
+    pub num_male_for_gallery: Option<i32>,
+    pub num_female_for_gallery: Option<i32>,
+    pub num_male_for_basement: Option<i32>,
+    pub num_female_for_basement: Option<i32>,
+    pub num_male_for_outside: Option<i32>,
+    pub num_female_for_outside: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, utoipa::ToSchema)]
@@ -109,4 +149,17 @@ pub struct RosterStatsByHallDto {
     pub percentage_unassigned: f64,
     pub number_of_male: u32,
     pub number_of_female: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, utoipa::ToSchema)]
+pub struct UserRosterHistoryDto {
+    pub id: Uuid,
+    pub roster_id: Uuid,
+    pub roster_name: String,
+    pub hall: Hall,
+    pub year: String,
+    pub start_date: chrono::NaiveDate,
+    pub end_date: chrono::NaiveDate,
+    pub is_active: bool,
+    pub assigned_at: chrono::NaiveDateTime,
 }

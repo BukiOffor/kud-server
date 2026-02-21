@@ -24,7 +24,6 @@ fn is_within_attendance_window(now: chrono::DateTime<chrono_tz::Tz>) -> bool {
             let end = 18 * 60; // 6:00 PM
             minutes_since_midnight >= start && minutes_since_midnight <= end
         }
-
         _ => false, // All other days
     }
 }

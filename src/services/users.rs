@@ -78,13 +78,23 @@ pub async fn register_user(
 
     let mut user: User = payload.try_into()?;
 
-    let count = schema::users::table
+    let max_reg_no = schema::users::table
         .filter(schema::users::year_joined.eq(&user.year_joined))
-        .count()
-        .get_result::<i64>(&mut conn)
-        .await?;
+        .select(schema::users::reg_no)
+        .order(schema::users::reg_no.desc())
+        .first::<String>(&mut conn)
+        .await
+        .optional()?;
 
-    user.set_reg_no(count + 1);
+    let next_code = match max_reg_no {
+        Some(reg) => {
+            let last_part = reg.split('/').last().unwrap_or("0");
+            last_part.parse::<i64>().unwrap_or(0) + 1
+        }
+        None => 1,
+    };
+
+    user.set_reg_no(next_code);
     diesel::insert_into(schema::users::table)
         .values(&user)
         .execute(&mut conn)
@@ -419,14 +429,24 @@ pub async fn import_users(
             temp_users.push(new_user);
         }
     }
-    // Get existing counts for each year from database
+    // Get starting counts for each year from database based on max existing reg_no
     for year in temp_years {
-        let count = schema::users::table
+        let max_reg_no = schema::users::table
             .filter(schema::users::year_joined.eq(&year))
-            .count()
-            .get_result::<i64>(&mut conn)
-            .await?;
-        year_counter.insert(year, count);
+            .select(schema::users::reg_no)
+            .order(schema::users::reg_no.desc())
+            .first::<String>(&mut conn)
+            .await
+            .optional()?;
+
+        let next_code = match max_reg_no {
+            Some(reg) => {
+                let last_part = reg.split('/').last().unwrap_or("0");
+                last_part.parse::<i64>().unwrap_or(0)
+            }
+            None => 0,
+        };
+        year_counter.insert(year, next_code);
     }
 
     for mut user in temp_users {

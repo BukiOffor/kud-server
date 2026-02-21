@@ -18,6 +18,7 @@ use utoipa_swagger_ui::SwaggerUi;
         handlers::users::change_password,
         handlers::users::reset_user_device_id,
         handlers::users::admin_update_user,
+        handlers::users::delete_user,
         handlers::user_attendance::sign_attendance,
         handlers::user_attendance::admin_sign_attendance,
         handlers::user_attendance::get_attendance_on_day,
